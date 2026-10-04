@@ -327,6 +327,10 @@ app.get('/api/admin/stats', (req, res) => {
   res.json(db.getStats())
 })
 
-app.listen(PORT, () => {
-  console.log(`TownSquare Marketplace Backend running on port ${PORT}`)
-})
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`TownSquare Marketplace Backend running on port ${PORT}`)
+  })
+}
+
+export default app
