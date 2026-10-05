@@ -3,7 +3,7 @@ export const MARKETPLACE_CONFIG = {
   tagline: 'One market. Every corner of the city.',
   orderPrefix: 'ORD',
   currency: '₦',
-  paystackPublicKey: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || '',
+  ownerWhatsApp: import.meta.env.VITE_OWNER_WHATSAPP || '2349045660915',
   concierge: {
     name: 'Amaka',
     role: 'Personal Shopper & Store Concierge',

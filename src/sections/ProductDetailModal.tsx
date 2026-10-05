@@ -14,7 +14,7 @@ export function ProductDetailModal({
   product,
   onClose,
   onAddToCart,
-  onNegotiate: _onNegotiate,
+  onNegotiate,
 }: ProductDetailModalProps) {
   if (!product) return null
 
@@ -141,20 +141,31 @@ export function ProductDetailModal({
                 </div>
                 <div className="flex items-center gap-2">
                   <ShieldCheck size={14} className="text-emerald-600 shrink-0" />
-                  <span>Buyer protection: Secure Paystack payment or Pay on Delivery</span>
+                  <span>Buyer protection: Order via WhatsApp · Verified Dispatch</span>
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="mt-6 border-t border-slate-100 pt-5">
+            <div className="mt-6 border-t border-slate-100 pt-5 flex flex-col sm:flex-row gap-3">
+              {onNegotiate && (
+                <button
+                  onClick={() => {
+                    onNegotiate(product)
+                    onClose()
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-emerald-50/70 py-3 sm:py-3.5 text-xs font-bold uppercase tracking-wider text-emerald-800 hover:bg-emerald-100 transition-all active:scale-[0.99]"
+                >
+                  Bargain with Amaka
+                </button>
+              )}
               {/* Primary: Add to Cart */}
               <button
                 onClick={() => {
                   onAddToCart(product)
                   onClose()
                 }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-emerald-900/10 hover:bg-emerald-700 transition-all active:scale-[0.99]"
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 sm:py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-emerald-900/10 hover:bg-emerald-700 transition-all active:scale-[0.99]"
               >
                 <ShoppingBag size={16} />
                 Add to Cart

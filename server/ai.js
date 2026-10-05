@@ -26,24 +26,18 @@ THE BARGAINING & NEGOTIATION RULES:
 - If the customer offers AT OR ABOVE the floor_price: Agree enthusiastically!
   "Deal! 🤝 Because you're a serious buyer, I agree to ₦[Agreed Price] for you!"
 
-PAYMENT & PAYSTACK FLOW:
+PAYMENT & ORDER FLOW:
 - When the customer agrees to the price or says they want to pay ("I want to pay", "send payment link", "how do I pay", "deal let me pay", "send account", "let me pay now", "where do I pay"):
-  You MUST invite them to pay via Paystack and output the special payment card tag:
-  [PAYSTACK_PAY:{"productId":"<PRODUCT_ID>","productName":"<PRODUCT_NAME>","amount":<AGREED_AMOUNT>}]
+  You MUST invite them to place their order via the Order button and output the special payment card tag:
+  [PAY_ACTION:{"productId":"<PRODUCT_ID>","productName":"<PRODUCT_NAME>","amount":<AGREED_AMOUNT>}]
   
   Example response:
-  "Wonderful! Let's lock this deal in for you right now at your agreed last price of **₦<AGREED_AMOUNT>**. Click the **Pay with Paystack** button below to complete your payment securely, and I will notify the owner on WhatsApp immediately!"
+  "Wonderful! Let's lock this deal in for you right now at your agreed last price of **₦<AGREED_AMOUNT>**. Click the **Order Now** button below to fill in your details, and you'll be connected directly with our sales team on WhatsApp to confirm your order!"
 
-POST-PAYMENT & DELIVERY ADDRESS CAPTURE:
-- If the customer mentions they have paid or completed payment ("I have paid", "payment done", "paid", "confirmed"):
+POST-ORDER & DELIVERY:
+- If the customer says they have ordered or submitted details:
   Confirm warmly:
-  "Payment received and verified! Your order is now processing! 🎉
-  To ensure our dispatch rider brings your package straight to your doorstep, please reply with:
-  1. Your exact delivery address & nearest landmark
-  2. Your phone number
-  3. Your email address"
-- When the customer provides their delivery address and phone number:
-  Thank them, confirm their delivery details, and let them know the order is officially booked and the owner has received the WhatsApp notification for dispatch!
+  "Your order has been submitted! Our sales team will reach you on WhatsApp shortly to confirm delivery details and arrange dispatch. Thank you for shopping with TownSquare! 🎉"
 `
 
 export async function processChat({ message, history = [], currentProductId = null }) {
@@ -120,15 +114,15 @@ export async function processChat({ message, history = [], currentProductId = nu
         if (replyText.trim().length < 5) {
           console.warn('AI returned empty/short content, falling back to simulator')
         } else {
-          // Parse any Paystack checkout tag from response or user intent
-          const paystackAction = extractPaystackAction(replyText, message, activeProduct)
+          // Parse any order/payment checkout tag from response or user intent
+          const payAction = extractPayAction(replyText, message, activeProduct)
 
           // Check if customer gave phone to create order
           const orderCreated = checkAndCreateOrderFromText(replyText, message, products, activeProduct)
 
           return {
             reply: cleanReply(replyText),
-            paystackAction,
+            payAction,
             products: findRelevantProducts(message, products),
             order: orderCreated,
           }
@@ -146,12 +140,22 @@ export async function processChat({ message, history = [], currentProductId = nu
   return simulateHumanSalesAgent(message, history, products, activeProduct)
 }
 
-function extractPaystackAction(replyText, userMsg, activeProduct) {
-  // Check for [PAYSTACK_PAY:{...}]
-  const match = replyText.match(/\[PAYSTACK_PAY:\s*({.*?})\]/)
+function extractPayAction(replyText, userMsg, activeProduct) {
+  // Check for [PAY_ACTION:{...}]
+  const match = replyText.match(/\[PAY_ACTION:\s*({.*?})\]/)
   if (match) {
     try {
       return JSON.parse(match[1])
+    } catch (e) {
+      // Fallback below
+    }
+  }
+
+  // Also check for legacy [PAYSTACK_PAY:{...}] format
+  const legacyMatch = replyText.match(/\[PAYSTACK_PAY:\s*({.*?})\]/)
+  if (legacyMatch) {
+    try {
+      return JSON.parse(legacyMatch[1])
     } catch (e) {
       // Fallback below
     }
@@ -165,7 +169,8 @@ function extractPaystackAction(replyText, userMsg, activeProduct) {
     userText.includes('buy now') ||
     userText.includes('payment link') ||
     userText.includes('send link') ||
-    userText.includes('paystack')
+    userText.includes('order now') ||
+    userText.includes('i want to order')
   ) {
     if (activeProduct) {
       return {
@@ -180,8 +185,11 @@ function extractPaystackAction(replyText, userMsg, activeProduct) {
 }
 
 function cleanReply(text) {
-  // Remove the raw tag from the customer text display
-  return text.replace(/\[PAYSTACK_PAY:.*?\]/g, '').trim()
+  // Remove the raw tags from the customer text display
+  return text
+    .replace(/\[PAY_ACTION:.*?\]/g, '')
+    .replace(/\[PAYSTACK_PAY:.*?\]/g, '')
+    .trim()
 }
 
 function findRelevantProducts(msg, products) {
@@ -246,12 +254,14 @@ function simulateHumanSalesAgent(msg, history = [], products, activeProduct) {
     text.includes('payment link') ||
     text.includes('send account') ||
     text.includes('let me pay') ||
-    text.includes('checkout')
+    text.includes('checkout') ||
+    text.includes('order now') ||
+    text.includes('i want to order')
   ) {
     const agreedAmount = prod ? (prod.floor_price || prod.listing_price) : 5000
     return {
-      reply: `Wonderful! Let's lock this in for you right now at your agreed last price of **₦${agreedAmount.toLocaleString()}**.\n\nPlease click the **Pay with Paystack** button below to complete your payment securely. Once paid, our logistics team will prepare your package for dispatch!`,
-      paystackAction: {
+      reply: `Wonderful! Let's lock this in for you right now at your agreed last price of **₦${agreedAmount.toLocaleString()}**.\n\nClick the **Order Now** button below to fill in your details, and you'll be connected directly with our sales team on WhatsApp to confirm your order and arrange delivery! 🚚`,
+      payAction: {
         productId: prod.id,
         productName: prod.name,
         amount: agreedAmount,
@@ -287,8 +297,8 @@ function simulateHumanSalesAgent(msg, history = [], products, activeProduct) {
         // At or above floor price -> agree happily!
         const agreed = offeredNumber <= listing ? offeredNumber : listing
         return {
-          reply: `Deal! 🤝 Because you're a serious buyer and I want you to enjoy this, I agree to ₦${agreed.toLocaleString()} for you!\n\nWhenever you are ready, say "let me pay" or click below to complete your payment with Paystack.`,
-          paystackAction: {
+          reply: `Deal! 🤝 Because you're a serious buyer and I want you to enjoy this, I agree to ₦${agreed.toLocaleString()} for you!\n\nWhenever you are ready, say "let me pay" or click the Order Now button below to complete your order via WhatsApp.`,
+          payAction: {
             productId: prod.id,
             productName: prod.name,
             amount: agreed,
@@ -361,10 +371,12 @@ function simulateHumanSalesAgent(msg, history = [], products, activeProduct) {
     text.includes('paid') ||
     text.includes('payment done') ||
     text.includes('i have paid') ||
-    text.includes('i paid')
+    text.includes('i paid') ||
+    text.includes('ordered') ||
+    text.includes('submitted')
   ) {
     return {
-      reply: `Payment received and verified! Your order is now processing! 🎉\n\nTo ensure our dispatch rider brings your package straight to your doorstep, please reply with:\n1. Your exact delivery address & nearest landmark\n2. Your active phone number\n3. Your email address\n\nOnce you drop these details, I will immediately alert our dispatch logistics team to dispatch your goods!`,
+      reply: `Your order has been submitted! 🎉 Our sales team will confirm your order on WhatsApp and arrange dispatch to your delivery address.\n\nThank you for shopping with TownSquare! If you need anything else, I'm right here.`,
       products: prod ? [prod] : [],
     }
   }
@@ -396,7 +408,7 @@ function checkAndCreateOrderFromText(replyText, userMsg, products, activeProduct
   if (phoneMatch) {
     const phone = phoneMatch[0]
     let custName = 'Valued Customer'
-    const nameMatch = userMsg.match(/(?:name is|my name is|i am|call me|name:)\s*([A-Za-z\s]+?)(?:,|\.|\bphone\b|\baddress\b|\bnumber\b|$)/i)
+    const nameMatch = userMsg.match(/(?:name is|my name is|i am|call me|name:)\s*([A-Za-z\s]+?)(?:,|\.|\\bphone\b|\baddress\b|\bnumber\b|$)/i)
     if (nameMatch && nameMatch[1].trim().length > 1) {
       custName = nameMatch[1].trim()
     }

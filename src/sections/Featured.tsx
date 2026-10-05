@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { X, Eye, ShoppingBag, CheckCircle2 } from 'lucide-react'
+import { X, Eye, ShoppingBag, CheckCircle2, MessageCircle } from 'lucide-react'
 import { fetchProducts } from '@/lib/api'
 import { formatNaira } from '@/lib/catalog'
 import type { Product } from '@/types/marketplace'
@@ -21,7 +21,7 @@ export function Featured({
   onClearSearch,
   onAdd,
   onViewDetail,
-  onNegotiate: _onNegotiate,
+  onNegotiate,
 }: FeaturedProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
@@ -209,13 +209,24 @@ export function Featured({
                       </span>
                     </div>
 
-                    <button
-                      onClick={() => onAdd(p)}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-emerald-700 transition-colors shadow-xs active:scale-[0.99]"
-                    >
-                      <ShoppingBag size={15} />
-                      Add to Cart
-                    </button>
+                    <div className="flex gap-2">
+                      {onNegotiate && (
+                        <button
+                          onClick={() => onNegotiate(p)}
+                          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-emerald-600 bg-emerald-50/70 py-2.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800 hover:bg-emerald-100 transition-colors active:scale-[0.98]"
+                        >
+                          <MessageCircle size={14} />
+                          Bargain
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onAdd(p)}
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-emerald-700 transition-colors shadow-xs active:scale-[0.98]"
+                      >
+                        <ShoppingBag size={14} />
+                        Add to Cart
+                      </button>
+                    </div>
                   </div>
                 </div>
               </article>

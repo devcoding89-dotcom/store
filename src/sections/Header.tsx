@@ -36,12 +36,12 @@ export function Header({
     <>
       {/* Top green announcement strip */}
       <div className="bg-emerald-700 text-white">
-        <div className="mx-auto flex h-8 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 text-xs font-medium">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={14} className="text-emerald-300" />
-            <span>100% Verified Sellers · Safe Paystack Checkout · Direct WhatsApp Dispatch</span>
+        <div className="mx-auto flex h-8 max-w-7xl items-center justify-between px-3 sm:px-6 lg:px-8 text-[11px] sm:text-xs font-medium">
+          <div className="flex items-center gap-2 truncate">
+            <ShieldCheck size={14} className="text-emerald-300 shrink-0" />
+            <span className="truncate">100% Verified Sellers · Order via WhatsApp · Direct Dispatch</span>
           </div>
-          <div className="hidden sm:flex items-center gap-4 text-emerald-100">
+          <div className="hidden sm:flex items-center gap-4 text-emerald-100 shrink-0">
             <span>Fast Same-Day Delivery</span>
             <span>•</span>
             <span>Bargain with Sales Desk Live</span>
@@ -67,8 +67,8 @@ export function Header({
             </div>
           </a>
 
-          {/* Prominent Search Bar */}
-          <div className="flex flex-1 max-w-lg items-center relative">
+          {/* Desktop Search Bar */}
+          <div className="hidden sm:flex flex-1 max-w-lg items-center relative">
             <Search size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
             <input
               type="text"
@@ -149,6 +149,29 @@ export function Header({
             >
               <Menu size={20} />
             </button>
+          </div>
+        </div>
+
+        {/* Mobile Full-Width Search Input */}
+        <div className="px-4 pb-3 sm:hidden">
+          <div className="flex items-center relative">
+            <Search size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Search books, iPhones, watches..."
+              className="w-full rounded-full border border-slate-300 bg-slate-50 pl-10 pr-9 py-2 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none transition-all shadow-xs"
+            />
+            {searchValue && (
+              <button
+                onClick={() => handleSearchChange('')}
+                className="absolute right-3 text-slate-400 hover:text-slate-600 text-xs p-1"
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
       </header>

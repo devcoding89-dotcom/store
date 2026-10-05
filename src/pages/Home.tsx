@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { MessageCircle } from 'lucide-react'
 import { Header } from '@/sections/Header'
 import { Hero } from '@/sections/Hero'
 import { Marquee } from '@/sections/Marquee'
@@ -202,6 +203,24 @@ export default function Home() {
             onClose={() => setAccountOpen(false)}
           />
         </div>
+      )}
+      {/* Floating Chat Trigger — quick access on mobile & desktop */}
+      {!chatOpen && (
+        <button
+          onClick={() => {
+            setActiveProduct(null)
+            setChatOpen(true)
+          }}
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-2.5 rounded-full bg-emerald-600 px-4 py-3.5 text-white shadow-xl shadow-emerald-950/20 hover:bg-emerald-700 hover:shadow-2xl transition-all active:scale-95 group"
+          aria-label="Chat with Amaka"
+        >
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+          </span>
+          <MessageCircle size={18} />
+          <span className="text-xs font-bold font-display tracking-wide">Bargain with Amaka</span>
+        </button>
       )}
     </div>
   )

@@ -21,7 +21,7 @@ const STEPS = [
     n: '03',
     icon: CreditCard,
     title: 'Negotiate & Pay',
-    body: `Bargain with our sales agent or pay listed price via Paystack. You get an instant order code — something like ${MARKETPLACE_CONFIG.orderPrefix}-48291.`,
+    body: `Bargain with our sales agent or pay listed price. Order via WhatsApp and get an instant order code — something like ${MARKETPLACE_CONFIG.orderPrefix}-48291.`,
     color: 'bg-amber-50 text-amber-600',
   },
   {
@@ -81,7 +81,7 @@ export function HowItWorks() {
           <div className="mt-12 flex flex-wrap items-center justify-center gap-4 text-xs text-slate-500">
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Payments secured by Paystack
+              Orders confirmed via WhatsApp
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />

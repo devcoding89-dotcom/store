@@ -34,8 +34,8 @@ function buildTimeline(order: Order): Step[] {
       done: true,
     },
     {
-      label: 'Payment Verified via Paystack',
-      time: isPaid ? 'Secured & Confirmed' : 'Awaiting payment verification',
+      label: 'Order Verified via WhatsApp',
+      time: isPaid ? 'Secured & Confirmed' : 'Awaiting dispatch confirmation',
       done: isPaid,
       current: !isPaid,
     },
@@ -129,7 +129,7 @@ export function TrackOrder({ prefill }: { prefill: string }) {
         </Reveal>
 
         <Reveal delay={80}>
-          <form onSubmit={submit} className="mt-8 flex max-w-xl items-center gap-3">
+          <form onSubmit={submit} className="mt-8 flex flex-col sm:flex-row max-w-xl items-stretch sm:items-end gap-3">
             <label className="flex-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
                 Order code
@@ -145,7 +145,7 @@ export function TrackOrder({ prefill }: { prefill: string }) {
             <button
               type="submit"
               disabled={loading}
-              className="mt-7 flex h-12 items-center gap-2 rounded-xl bg-white px-6 text-sm font-bold text-emerald-700 shadow-sm transition-all hover:bg-emerald-50 hover:shadow-md disabled:opacity-50"
+              className="flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-6 text-sm font-bold text-emerald-700 shadow-sm transition-all hover:bg-emerald-50 hover:shadow-md disabled:opacity-50 shrink-0"
             >
               {loading ? <RefreshCw size={15} className="animate-spin" /> : 'Track Live'}
               <ArrowRight size={15} strokeWidth={2} />
@@ -192,7 +192,7 @@ export function TrackOrder({ prefill }: { prefill: string }) {
                     {formatNaira(order.total_amount)}
                   </p>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                    {order.payment_status === 'PAID' ? '✓ Paid on Paystack' : 'Payment Pending'}
+                    {order.payment_status === 'PAID' ? '✓ Order Confirmed' : 'Payment on Delivery / Pending'}
                   </p>
                 </div>
                 <button

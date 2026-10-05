@@ -34,7 +34,7 @@ export function Hero({
             </h1>
 
             <p className="mt-5 text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl font-normal">
-              Direct from verified stalls across the city. Negotiate prices in real-time with our sales desk manager, pay securely with Paystack, and get tracked delivery to your door.
+              Direct from verified stalls across the city. Negotiate prices in real-time with our sales desk manager, order via WhatsApp, and get tracked delivery to your door.
             </p>
 
             {/* Big prominent search box */}
@@ -88,7 +88,7 @@ export function Hero({
             </div>
 
             {/* Trust badge icons */}
-            <div className="mt-10 grid grid-cols-3 gap-4 border-t border-slate-200/80 pt-6">
+            <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 border-t border-slate-200/80 pt-6">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 shrink-0">
                   <ShieldCheck size={18} />
@@ -132,7 +132,7 @@ export function Hero({
                   </span>
                 </div>
                 <span className="rounded bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-                  Paystack Verified
+                  WhatsApp Order
                 </span>
               </div>
 
@@ -170,7 +170,7 @@ export function Hero({
 
                 <div className="flex justify-end">
                   <div className="bg-emerald-600 text-white rounded-2xl rounded-tr-xs px-3 py-2 leading-relaxed max-w-[80%] font-medium">
-                    "Deal! Let me pay with Paystack right now."
+                    "Deal! Let me order now via WhatsApp."
                   </div>
                 </div>
               </div>

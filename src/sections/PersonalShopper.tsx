@@ -93,7 +93,7 @@ export function PersonalShopper({
     // Payment query
     if (q.includes('pay') || q.includes('card') || q.includes('transfer') || q.includes('cod')) {
       return {
-        text: `You have two easy ways to pay:\n\n1. Online via Paystack (card, USSD, bank transfer) with full buyer protection.\n2. Pay on delivery directly when the rider arrives.\n\nEvery order comes with a receipt and tracking code!`,
+        text: `You have two easy ways to pay:\n\n1. Chat with Amaka to order directly via WhatsApp with full buyer protection.\n2. Direct bank transfer or pay on delivery when the rider arrives.\n\nEvery order comes with a receipt and tracking code!`,
       }
     }
 

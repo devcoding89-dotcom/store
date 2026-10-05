@@ -157,7 +157,7 @@ export function CartDrawer({
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-emerald-700">
                   <ShieldCheck size={14} />
-                  <span>Buyer Protection & Paystack Secured</span>
+                  <span>Buyer Protection & Verified Sellers</span>
                 </div>
               </div>
 
@@ -172,7 +172,7 @@ export function CartDrawer({
               </button>
 
               <p className="text-center text-[11px] text-slate-500 leading-relaxed">
-                Meet your personal sales manager Amaka to review product specs, lock in last price, and complete payment.
+                Meet your personal sales manager Amaka to review product specs, lock in last price, and confirm order via WhatsApp.
               </p>
             </div>
           </>

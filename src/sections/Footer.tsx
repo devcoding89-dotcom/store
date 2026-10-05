@@ -108,7 +108,7 @@ export function Footer() {
           <p className="flex items-center gap-1.5">
             Built for local businesses & shoppers
             <span className="h-1 w-1 rounded-full bg-emerald-500" />
-            Payments by Paystack
+            Orders via WhatsApp
           </p>
         </div>
       </div>

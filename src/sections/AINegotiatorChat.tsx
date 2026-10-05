@@ -2,14 +2,17 @@ import { useState, useRef, useEffect } from 'react'
 import {
   Send,
   X,
-  CreditCard,
-  CheckCircle2,
+  ShoppingBag,
   MapPin,
-  ShieldCheck,
+  MessageCircle,
   Maximize2,
   Minimize2,
+  User,
+  Phone,
+  ArrowRight,
+  ExternalLink,
 } from 'lucide-react'
-import { sendChatMessage, paystackCheckout, verifyPaystackPayment } from '@/lib/api'
+import { sendChatMessage } from '@/lib/api'
 import { formatNaira } from '@/lib/catalog'
 import { MARKETPLACE_CONFIG } from '@/lib/config'
 import { QRCodeDisplay } from '@/components/QRCodeDisplay'
@@ -22,14 +25,14 @@ type Message = {
   time: string
   products?: Product[]
   order?: Order | null
-  paystackAction?: {
+  payAction?: {
     productId: string
     productName: string
     amount: number
   } | null
-  isPaymentSuccess?: boolean
+  isOrderPlaced?: boolean
   trackingCode?: string
-  whatsappNotificationUrl?: string
+  whatsappUrl?: string
 }
 
 type AINegotiatorChatProps = {
@@ -63,6 +66,8 @@ export function AINegotiatorChat({
   activeProduct,
   checkoutItems,
 }: AINegotiatorChatProps) {
+  const ownerWhatsApp = (MARKETPLACE_CONFIG.ownerWhatsApp || '2349138987295').replace(/\D/g, '')
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'msg-welcome',
@@ -74,26 +79,24 @@ export function AINegotiatorChat({
   ])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
-  const [payingLoading, setPayingLoading] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
 
-  const [showAddressForm, setShowAddressForm] = useState(false)
-  const [showPrePayModal, setShowPrePayModal] = useState(false)
-  const [prePayAction, setPrePayAction] = useState<{
+  // Checkout form modal state
+  const [showCheckoutForm, setShowCheckoutForm] = useState(false)
+  const [formError, setFormError] = useState('')
+  const [checkoutAction, setCheckoutAction] = useState<{
     productId: string
     productName: string
     amount: number
   } | null>(null)
-  const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
-  const [addressFormData, setAddressFormData] = useState({
+  const [checkoutFormData, setCheckoutFormData] = useState({
     name: '',
-    phone: '',
-    email: '',
     address: '',
-    landmark: '',
+    whatsapp: '',
   })
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -104,6 +107,15 @@ export function AINegotiatorChat({
       scrollToBottom()
     }
   }, [isOpen, messages, isTyping])
+
+  // Focus on name input when checkout form opens
+  useEffect(() => {
+    if (showCheckoutForm) {
+      setTimeout(() => {
+        nameInputRef.current?.focus()
+      }, 100)
+    }
+  }, [showCheckoutForm])
 
   // Handle Cart Checkout trigger
   useEffect(() => {
@@ -121,7 +133,7 @@ export function AINegotiatorChat({
           )}**).\n\nWould you like me to walk you through the specifications and how the items work, or would you like to discuss a sweet last price before we lock it in?`,
           time: getTimestamp(),
           products: checkoutItems.map((i) => i.product),
-          paystackAction: {
+          payAction: {
             productId: primaryProduct.id,
             productName: itemsList,
             amount: subtotal,
@@ -149,13 +161,18 @@ export function AINegotiatorChat({
           }Would you like to ask how it works, or make an offer on our last price? Tell me what price works for your budget!`,
           time: getTimestamp(),
           products: [activeProduct],
+          payAction: {
+            productId: activeProduct.id,
+            productName: activeProduct.name,
+            amount: activeProduct.floor_price || activeProduct.listing_price,
+          },
         },
       ])
       onOpen()
     }
   }, [activeProduct])
 
-  // Send message with realistic, human-like typing delay (not instant!)
+  // Send message with realistic, human-like typing delay
   const handleSend = async (textToSend?: string) => {
     const text = (textToSend || input).trim()
     if (!text || isTyping) return
@@ -171,8 +188,17 @@ export function AINegotiatorChat({
     setInput('')
     setIsTyping(true)
 
-    // Calculate realistic human typing delay (1.8s to 2.8s) so AI feels like a real woman typing
-    const typingDelay = Math.min(2800, Math.max(1800, text.length * 25))
+    // Check if user is asking to pay right now
+    const lowerText = text.toLowerCase()
+    const isPaymentIntent =
+      lowerText.includes('pay') ||
+      lowerText.includes('checkout') ||
+      lowerText.includes('buy now') ||
+      lowerText.includes('order now') ||
+      lowerText.includes('i want to order')
+
+    // Typing delay between 1.4s to 2.2s
+    const typingDelay = Math.min(2200, Math.max(1400, text.length * 20))
 
     try {
       const historyPayload = messages.map((m) => ({
@@ -187,6 +213,19 @@ export function AINegotiatorChat({
         new Promise((resolve) => setTimeout(resolve, typingDelay)),
       ])
 
+      // Fallback payAction if payment intent detected and none returned
+      let effectivePayAction = result.payAction || (result as Record<string, unknown>).paystackAction
+      if (!effectivePayAction && isPaymentIntent) {
+        const prod = activeProduct || (result.products && result.products[0]) || checkoutItems?.[0]?.product
+        if (prod) {
+          effectivePayAction = {
+            productId: prod.id,
+            productName: prod.name,
+            amount: prod.floor_price || prod.listing_price,
+          }
+        }
+      }
+
       const assistantMsg: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -194,12 +233,12 @@ export function AINegotiatorChat({
         time: getTimestamp(),
         products: result.products,
         order: result.order,
-        paystackAction: result.paystackAction,
+        payAction: effectivePayAction as Message['payAction'],
       }
 
       setMessages((prev) => [...prev, assistantMsg])
     } catch {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 1200))
       setMessages((prev) => [
         ...prev,
         {
@@ -215,260 +254,112 @@ export function AINegotiatorChat({
     }
   }
 
-  // Helper to ensure Paystack inline script is loaded
-  const loadPaystackInline = (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      if (typeof window !== 'undefined' && (window as any).PaystackPop) {
-        return resolve(true)
-      }
-      const existing = document.querySelector('script[src*="paystack"]')
-      if (existing) {
-        existing.addEventListener('load', () => resolve(true))
-        existing.addEventListener('error', () => resolve(false))
-        if ((window as any).PaystackPop) return resolve(true)
-        setTimeout(() => resolve(!!(window as any).PaystackPop), 1200)
-        return
-      }
-      const script = document.createElement('script')
-      script.src = 'https://js.paystack.co/v1/inline.js'
-      script.async = true
-      script.onload = () => resolve(true)
-      script.onerror = () => resolve(false)
-      document.head.appendChild(script)
-    })
-  }
-
-  // Initiate real Paystack popup with live key
-  const initiatePaystack = async (
-    action: {
-      productId: string
-      productName: string
-      amount: number
-    },
-    customerDetails: { name: string; email: string; phone: string }
-  ) => {
-    setPayingLoading(true)
-
-    const loaded = await loadPaystackInline()
-    if (!loaded || !(window as any).PaystackPop) {
-      alert('Could not initialize Paystack popup. Please check your internet connection.')
-      setPayingLoading(false)
-      return
-    }
-
-    const publicKey =
-      MARKETPLACE_CONFIG.paystackPublicKey ||
-      import.meta.env.VITE_PAYSTACK_PUBLIC_KEY ||
-      ''
-    const reference = `TOWN_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`
-
-    try {
-      const handler = (window as any).PaystackPop.setup({
-        key: publicKey,
-        email: customerDetails.email,
-        amount: Math.round(action.amount * 100), // amount in kobo
-        currency: 'NGN',
-        ref: reference,
-        metadata: {
-          custom_fields: [
-            {
-              display_name: 'Customer Name',
-              variable_name: 'customer_name',
-              value: customerDetails.name,
-            },
-            {
-              display_name: 'Customer Phone',
-              variable_name: 'customer_phone',
-              value: customerDetails.phone,
-            },
-            {
-              display_name: 'Product Name',
-              variable_name: 'product_name',
-              value: action.productName,
-            },
-          ],
-        },
-        callback: async function (response: { reference: string }) {
-          setPayingLoading(true)
-          try {
-            // Verify payment on server
-            try {
-              await verifyPaystackPayment(response.reference)
-            } catch (vErr) {
-              console.warn('Server verification note:', vErr)
-            }
-
-            // Create confirmed order record
-            const checkoutRes = await paystackCheckout({
-              customer_name: customerDetails.name,
-              customer_phone: customerDetails.phone,
-              customer_email: customerDetails.email,
-              delivery_address: addressFormData.address || 'Address pending in chat',
-              product_id: action.productId,
-              agreed_price: action.amount,
-              delivery_fee: 800,
-              payment_reference: response.reference,
-            })
-
-            const order = checkoutRes.order
-            setPendingOrderId(order.id)
-
-            // Post verified confirmation in chat
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `pay-success-${Date.now()}`,
-                role: 'assistant',
-                content: `🎉 **PAYMENT CONFIRMED ON PAYSTACK!**\n\nYour payment of **${formatNaira(
-                  action.amount
-                )}** for **${action.productName}** has been successfully verified!\n\n🧾 **Paystack Reference:** \`${response.reference}\`\n📦 **Order Tracking Code:** **${order.id}**\n\nYour order is now **CONFIRMED**! To ensure our dispatch rider brings your package straight to your doorstep, please provide your exact delivery address and phone number below.`,
-                time: getTimestamp(),
-                isPaymentSuccess: true,
-                trackingCode: order.id,
-              },
-            ])
-
-            setShowAddressForm(true)
-          } catch (err) {
-            console.error('Post-payment order recording error:', err)
-            // Even if post-payment recording had an issue, acknowledge payment
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `pay-success-${Date.now()}`,
-                role: 'assistant',
-                content: `🎉 **PAYMENT RECEIVED ON PAYSTACK!**\n\nPaystack Reference: \`${response.reference}\`\n\nYour payment was successful! Please share your delivery address below so we can dispatch your package immediately.`,
-                time: getTimestamp(),
-                isPaymentSuccess: true,
-                trackingCode: `ORD-${Date.now().toString().slice(-5)}`,
-              },
-            ])
-            setShowAddressForm(true)
-          } finally {
-            setPayingLoading(false)
-          }
-        },
-        onClose: function () {
-          setPayingLoading(false)
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: `pay-cancelled-${Date.now()}`,
-              role: 'assistant',
-              content:
-                "I noticed the Paystack checkout was closed. No problem at all! Whenever you are ready to complete your purchase, just click the payment button, or let me know if you'd like to ask anything else.",
-              time: getTimestamp(),
-            },
-          ])
-        },
-      })
-
-      handler.openIframe()
-    } catch (err) {
-      console.error('Paystack setup error:', err)
-      alert('Could not start Paystack checkout. Please try again.')
-      setPayingLoading(false)
-    }
-  }
-
-  // Handle Paystack Payment button click
-  const handlePaystackPay = (action: {
+  // Handle "Pay Now" button click — shows the checkout form modal
+  const handlePayNow = (action: {
     productId: string
     productName: string
     amount: number
   }) => {
-    // If we don't have valid email and phone, open customer details modal first
-    if (!addressFormData.email || !addressFormData.email.includes('@') || !addressFormData.phone) {
-      setPrePayAction(action)
-      setShowPrePayModal(true)
-      return
-    }
-
-    initiatePaystack(action, {
-      name: addressFormData.name || 'Valued Customer',
-      email: addressFormData.email,
-      phone: addressFormData.phone,
-    })
+    setCheckoutAction(action)
+    setFormError('')
+    setShowCheckoutForm(true)
   }
 
-  // Handle address submission
-  const handleAddressSubmit = async (e: React.FormEvent) => {
+  // Handle checkout form submission → redirect to owner's WhatsApp with all details
+  const handleCheckoutSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!addressFormData.address || !addressFormData.phone) {
-      alert('Please provide your delivery address and phone number')
+
+    const name = checkoutFormData.name.trim()
+    const address = checkoutFormData.address.trim()
+    const whatsapp = checkoutFormData.whatsapp.trim()
+
+    if (!name || !address || !whatsapp) {
+      setFormError('Please fill in your name, delivery address, and WhatsApp number.')
       return
     }
 
-    const orderCode = pendingOrderId || `ORD-${Math.floor(10000 + Math.random() * 89999)}`
+    const orderCode = `ORD-${Date.now().toString().slice(-6)}`
+    const itemName = checkoutAction?.productName || activeProduct?.name || 'Selected Items'
+    const agreedAmount = checkoutAction ? formatNaira(checkoutAction.amount) : 'To be confirmed'
 
-    // Generate automated WhatsApp message for the OWNER
-    const ownerNumber = '2349138987295'
-    const fullAddress = `${addressFormData.address}${
-      addressFormData.landmark ? ` (Landmark: ${addressFormData.landmark})` : ''
-    }`
-    const ownerWhatsAppMsg = `🚨 *NEW PAID ORDER FROM TOWNSQUARE!*
+    // Build the comprehensive WhatsApp message for the store owner
+    const whatsappMessage = `🛒 *NEW ORDER FROM TOWNSQUARE!*
 
-📦 *Item:* ${activeProduct?.name || 'Selected Items'}
-💰 *Amount Paid:* Confirmed on Paystack
-👤 *Customer:* ${addressFormData.name || 'Customer'}
-📞 *Customer Phone:* ${addressFormData.phone}
-📍 *Delivery Address:* ${fullAddress}
+📦 *Item:* ${itemName}
+💰 *Agreed Price:* ${agreedAmount}
+👤 *Customer Name:* ${name}
+📍 *Delivery Address:* ${address}
+📞 *Customer WhatsApp:* ${whatsapp}
 🧾 *Order Code:* ${orderCode}
 
-Please package and dispatch this order!`
+💬 *Message:* Hello, I discussed this order with Amaka on TownSquare and agreed to place it. Please confirm and arrange dispatch to my address!`
 
-    // Dispatch record for store logistics
-    console.log('Dispatch order code created:', orderCode, 'for owner:', ownerNumber, ownerWhatsAppMsg)
+    // Encode for WhatsApp URL
+    const encodedMsg = encodeURIComponent(whatsappMessage)
+    const whatsappUrl = `https://wa.me/${ownerWhatsApp}?text=${encodedMsg}`
 
-    setShowAddressForm(false)
-    setIsTyping(true)
+    // Close the form
+    setShowCheckoutForm(false)
 
-    // Realistic delay for Amaka processing the delivery booking
-    await new Promise((res) => setTimeout(res, 1800))
-    setIsTyping(false)
-
+    // Add confirmation message in chat with tracking code and one-tap re-open link
     setMessages((prev) => [
       ...prev,
       {
-        id: `delivery-confirmed-${Date.now()}`,
+        id: `checkout-${Date.now()}`,
         role: 'assistant',
-        content: `Wonderful! Your delivery has been officially booked! 🚚\n\n📍 **Destination:** ${fullAddress}\n📞 **Contact Phone:** ${addressFormData.phone}\n🧾 **Order Tracking Code:** **${orderCode}**\n\nOur logistics dispatch team has been notified with your delivery address so your package is packaged immediately!\n\nHere is your **Delivery Verification QR Code** below. When the dispatch rider arrives at your doorstep, show this QR code to complete delivery:`,
+        content: `✅ **Order Details Received!**\n\n📦 **Item:** ${itemName}\n💰 **Price:** ${agreedAmount}\n👤 **Name:** ${name}\n📍 **Address:** ${address}\n📞 **WhatsApp:** ${whatsapp}\n🧾 **Order Code:** \`${orderCode}\`\n\nRedirecting you to WhatsApp to complete your order with the owner. If WhatsApp did not open automatically, tap the green button below!`,
         time: getTimestamp(),
         trackingCode: orderCode,
+        whatsappUrl,
       },
     ])
+
+    // Reset form data
+    setCheckoutFormData({ name: '', address: '', whatsapp: '' })
+    setFormError('')
+
+    // Mobile-friendly redirect to WhatsApp
+    const isMobile =
+      typeof window !== 'undefined' &&
+      /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+
+    if (isMobile) {
+      window.location.href = whatsappUrl
+    } else {
+      window.open(whatsappUrl, '_blank')
+    }
   }
 
   if (!isOpen) return null
 
   return (
     <div
-      className={`fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-2 sm:p-4 backdrop-blur-xs animate-fade-in`}
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-xs animate-fade-in"
     >
       <div
-        className={`relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all duration-200 ${
+        className={`relative flex flex-col overflow-hidden bg-white shadow-2xl transition-all duration-200 ${
           isFullScreen
-            ? 'h-full w-full max-w-none rounded-none'
-            : 'h-[90vh] w-full max-w-3xl'
+            ? 'h-[100dvh] w-full max-w-none rounded-none'
+            : 'h-[100dvh] w-full sm:h-[90vh] sm:max-w-3xl sm:rounded-2xl sm:border sm:border-slate-200'
         }`}
       >
         {/* Chat Header */}
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-5">
-          <div className="flex items-center gap-3">
+        <div className="flex h-14 sm:h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-3 sm:px-5">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="relative">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 font-bold text-white shadow-sm ring-2 ring-emerald-100">
+              <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-emerald-600 font-bold text-white shadow-sm ring-2 ring-emerald-100 text-sm sm:text-base">
                 A
               </div>
-              <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white" />
+              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-emerald-500 ring-2 ring-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-display text-base font-bold text-slate-900">Amaka</h3>
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                  Verified Sales Manager
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <h3 className="font-display text-sm sm:text-base font-bold text-slate-900">Amaka</h3>
+                <span className="rounded-full bg-emerald-100 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-emerald-800">
+                  Sales Desk
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">
+              <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
                 {isTyping ? (
                   <span className="text-emerald-700 font-semibold animate-pulse">
                     Amaka is typing...
@@ -483,89 +374,105 @@ Please package and dispatch this order!`
           <div className="flex items-center gap-1">
             <button
               onClick={() => setIsFullScreen(!isFullScreen)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
               title={isFullScreen ? 'Exit Full Screen' : 'Full Screen'}
             >
               {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors active:scale-95"
               title="Close Chat"
+              aria-label="Close Chat"
             >
-              <X size={18} />
+              <X size={20} />
             </button>
           </div>
         </div>
 
         {/* Messages Scroll Area */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-50/60">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-5 bg-slate-50/60 overscroll-contain">
           {messages.map((m) => (
             <div
               key={m.id}
               className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
             >
-              <div className="flex items-end gap-2 max-w-[85%] sm:max-w-[75%]">
+              <div className="flex items-end gap-1.5 sm:gap-2 max-w-[92%] sm:max-w-[78%]">
                 {m.role === 'assistant' && (
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white mb-1 shadow-xs">
+                  <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[10px] sm:text-xs font-bold text-white mb-1 shadow-xs">
                     A
                   </div>
                 )}
 
                 <div
-                  className={`rounded-2xl p-4 text-sm leading-relaxed shadow-xs ${
+                  className={`rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm leading-relaxed shadow-xs ${
                     m.role === 'user'
-                      ? 'bg-emerald-600 text-white rounded-br-xs'
+                      ? 'bg-emerald-600 text-white rounded-br-xs font-medium'
                       : 'bg-white text-slate-800 border border-slate-200 rounded-bl-xs'
                   }`}
                 >
                   <p className="whitespace-pre-line font-normal">{m.content}</p>
 
-                  {/* Payment Card Tag */}
-                  {m.paystackAction && !m.isPaymentSuccess && (
-                    <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/80 p-3.5 space-y-3">
+                  {/* Payment / Order Action Card */}
+                  {m.payAction && !m.isOrderPlaced && (
+                    <div className="mt-3 sm:mt-4 rounded-xl border-2 border-emerald-300 bg-emerald-50/90 p-3.5 sm:p-4 space-y-3 shadow-xs">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 font-bold text-emerald-900 text-xs uppercase tracking-wider">
-                          <CreditCard size={15} />
-                          <span>Official Payment Slip</span>
+                        <div className="flex items-center gap-1.5 font-bold text-emerald-950 text-[11px] sm:text-xs uppercase tracking-wider">
+                          <ShoppingBag size={14} className="text-emerald-700" />
+                          <span>Agreed Deal Summary</span>
                         </div>
-                        <span className="rounded bg-emerald-200/80 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
-                          Agreed Deal
+                        <span className="rounded-full bg-emerald-200/90 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-emerald-900">
+                          Ready to Order
                         </span>
                       </div>
 
-                      <div className="border-t border-emerald-200/60 pt-2 flex items-baseline justify-between">
-                        <span className="text-xs text-emerald-800 font-medium">Agreed Last Price:</span>
-                        <span className="font-display text-xl font-extrabold text-emerald-900">
-                          {formatNaira(m.paystackAction.amount)}
+                      <div className="border-t border-emerald-200/80 pt-2 flex items-baseline justify-between">
+                        <span className="text-xs text-emerald-800 font-medium">Agreed Price:</span>
+                        <span className="font-display text-xl sm:text-2xl font-extrabold text-emerald-900">
+                          {formatNaira(m.payAction.amount)}
                         </span>
                       </div>
 
                       <button
-                        onClick={() => handlePaystackPay(m.paystackAction!)}
-                        disabled={payingLoading}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-emerald-800 transition-all disabled:opacity-50"
+                        type="button"
+                        onClick={() => handlePayNow(m.payAction!)}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 sm:py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-emerald-900/10 hover:bg-emerald-700 active:scale-[0.98] transition-all"
                       >
-                        <ShieldCheck size={16} />
-                        {payingLoading
-                          ? 'Connecting to Paystack...'
-                          : `Pay with Paystack (${formatNaira(m.paystackAction.amount)})`}
+                        <MessageCircle size={16} />
+                        <span>👉 Click Here to Enter Name & Address</span>
+                        <ArrowRight size={14} />
                       </button>
                     </div>
                   )}
 
+                  {/* Direct WhatsApp link fallback button */}
+                  {m.whatsappUrl && (
+                    <a
+                      href={m.whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-emerald-700 transition-colors"
+                    >
+                      <MessageCircle size={16} />
+                      <span>Open WhatsApp with Owner</span>
+                      <ExternalLink size={14} />
+                    </a>
+                  )}
+
                   {/* Delivery Verification QR Code */}
                   {m.trackingCode && (
-                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 flex flex-col items-center text-center space-y-2.5">
-                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-800">
-                        Delivery Verification QR Code
+                    <div className="mt-3 sm:mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3.5 sm:p-4 flex flex-col items-center text-center space-y-2 sm:space-y-2.5">
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                        Order Tracking Code
                       </span>
-                      <p className="text-xs font-mono font-bold text-slate-900">{m.trackingCode}</p>
+                      <p className="text-sm font-mono font-bold text-slate-900 tracking-wider">
+                        {m.trackingCode}
+                      </p>
 
-                      <QRCodeDisplay value={m.trackingCode} size={150} />
+                      <QRCodeDisplay value={m.trackingCode} size={110} />
 
-                      <p className="text-[11px] text-slate-500 max-w-xs">
-                        Show this QR code to the dispatch rider upon delivery for automated status confirmation.
+                      <p className="text-[10px] sm:text-[11px] text-slate-500 max-w-xs leading-normal">
+                        Save this code to track your order dispatch and delivery status.
                       </p>
 
                       <button
@@ -573,124 +480,29 @@ Please package and dispatch this order!`
                           onClose()
                           onTrackOrder(m.trackingCode!)
                         }}
-                        className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-600 transition-colors"
+                        className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-600 transition-colors active:scale-95"
                       >
-                        Track Live Order Status
+                        Track Order Live
                       </button>
                     </div>
                   )}
                 </div>
               </div>
-              <span className="text-[10px] text-slate-400 mt-1 px-9">{m.time}</span>
+              <span className="text-[9px] sm:text-[10px] text-slate-400 mt-1 px-8 sm:px-9">{m.time}</span>
             </div>
           ))}
 
           {/* Typing Indicator */}
           {isTyping && (
-            <div className="flex items-end gap-2">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white mb-1 shadow-xs">
+            <div className="flex items-end gap-1.5 sm:gap-2">
+              <div className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[10px] sm:text-xs font-bold text-white mb-1 shadow-xs">
                 A
               </div>
-              <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-xs border border-slate-200 bg-white px-4 py-3 shadow-xs">
-                <span className="h-2 w-2 rounded-full bg-emerald-600 animate-bounce" />
-                <span className="h-2 w-2 rounded-full bg-emerald-600 animate-bounce [animation-delay:0.2s]" />
-                <span className="h-2 w-2 rounded-full bg-emerald-600 animate-bounce [animation-delay:0.4s]" />
+              <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-xs border border-slate-200 bg-white px-3.5 sm:px-4 py-2.5 sm:py-3 shadow-xs">
+                <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-600 animate-bounce" />
+                <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-600 animate-bounce [animation-delay:0.2s]" />
+                <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-600 animate-bounce [animation-delay:0.4s]" />
               </div>
-            </div>
-          )}
-
-          {/* Post-Payment Address Capture Form */}
-          {showAddressForm && (
-            <div className="rounded-2xl border border-emerald-300 bg-white p-5 shadow-lg space-y-4">
-              <div className="flex items-center gap-2 text-emerald-800">
-                <MapPin size={18} />
-                <h4 className="font-display text-base font-bold text-slate-900">
-                  Enter Your Delivery Address
-                </h4>
-              </div>
-              <p className="text-xs text-slate-600">
-                Amaka will record this exact location and alert the store owner on WhatsApp to dispatch your goods!
-              </p>
-
-              <form onSubmit={handleAddressSubmit} className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider block mb-1">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Babatunde Alao"
-                      value={addressFormData.name}
-                      onChange={(e) => setAddressFormData({ ...addressFormData, name: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider block mb-1">
-                      Active Phone Number *
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="e.g. 08012345678"
-                      value={addressFormData.phone}
-                      onChange={(e) => setAddressFormData({ ...addressFormData, phone: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider block mb-1">
-                    Street Address & Building *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 14 Admiralty Way, Block B Flat 2"
-                    value={addressFormData.address}
-                    onChange={(e) => setAddressFormData({ ...addressFormData, address: e.target.value })}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider block mb-1">
-                      Nearest Landmark *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Opposite Central Mosque, Near Total Station"
-                      value={addressFormData.landmark}
-                      onChange={(e) => setAddressFormData({ ...addressFormData, landmark: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider block mb-1">
-                      Email Address (Optional)
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="e.g. buyer@gmail.com"
-                      value={addressFormData.email}
-                      onChange={(e) => setAddressFormData({ ...addressFormData, email: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-emerald-700 transition-colors"
-                >
-                  <CheckCircle2 size={16} />
-                  Confirm Delivery Details & Notify Owner
-                </button>
-              </form>
             </div>
           )}
 
@@ -698,20 +510,20 @@ Please package and dispatch this order!`
         </div>
 
         {/* Quick Suggestion Chips */}
-        <div className="flex gap-2 overflow-x-auto border-t border-slate-200 bg-white px-4 py-2.5">
+        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto border-t border-slate-200 bg-white px-3 sm:px-4 py-2 sm:py-2.5 scrollbar-hide shrink-0">
           {QUICK_PROMPTS.map((prompt) => (
             <button
               key={prompt}
               onClick={() => handleSend(prompt)}
-              className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-800 transition-colors"
+              className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-800 transition-colors active:scale-95"
             >
               {prompt}
             </button>
           ))}
         </div>
 
-        {/* Input Form */}
-        <div className="border-t border-slate-200 bg-white p-3 sm:p-4">
+        {/* Input Form — 16px font-size to prevent iOS Safari auto-zoom */}
+        <div className="border-t border-slate-200 bg-white p-2.5 sm:p-4 shrink-0 pb-4 sm:pb-4">
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -723,126 +535,134 @@ Please package and dispatch this order!`
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Amaka anything (e.g. How does this work? How much last?)..."
+              placeholder="Ask Amaka anything (e.g. I want to pay)..."
               disabled={isTyping}
-              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none transition-colors"
+              className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none transition-colors font-normal"
             />
             <button
               type="submit"
               disabled={!input.trim() || isTyping}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-40"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-40 active:scale-95"
               aria-label="Send message"
             >
-              <Send size={18} />
+              <Send size={17} />
             </button>
           </form>
         </div>
 
-        {/* Pre-Payment Customer Details Modal for Paystack */}
-        {showPrePayModal && prePayAction && (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
-            <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
-              <div className="flex items-center justify-between">
+        {/* Checkout Form Modal (WhatsApp Direct Redirect) */}
+        {showCheckoutForm && checkoutAction && (
+          <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-slate-900/60 p-0 sm:p-4 backdrop-blur-xs animate-fade-in">
+            <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl border-t sm:border border-slate-200 bg-white p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto pb-8 sm:pb-6">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
-                    <CreditCard size={20} />
+                    <ShoppingBag size={20} />
                   </div>
                   <div>
                     <h4 className="font-display text-base font-bold text-slate-900">
-                      Paystack Secure Checkout
+                      Enter Delivery Details
                     </h4>
                     <p className="text-xs text-slate-500">
-                      Amount:{' '}
+                      {checkoutAction.productName} —{' '}
                       <strong className="text-emerald-700 font-bold">
-                        {formatNaira(prePayAction.amount)}
+                        {formatNaira(checkoutAction.amount)}
                       </strong>
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => setShowPrePayModal(false)}
-                  className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  type="button"
+                  onClick={() => setShowCheckoutForm(false)}
+                  className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                  aria-label="Close"
                 >
-                  <X size={18} />
+                  <X size={20} />
                 </button>
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                Please enter your contact details. Paystack will send your official transaction receipt to your email, and our dispatch team will use your phone number.
+                Fill in your details below. Once you press <strong>Enter</strong>, it will take you directly to the owner's WhatsApp with all your order information ready to send!
               </p>
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  if (!addressFormData.email || !addressFormData.phone) {
-                    alert('Please enter your email and phone number to continue')
-                    return
-                  }
-                  setShowPrePayModal(false)
-                  initiatePaystack(prePayAction, {
-                    name: addressFormData.name || 'Valued Customer',
-                    email: addressFormData.email,
-                    phone: addressFormData.phone,
-                  })
-                }}
-                className="space-y-3 pt-1"
-              >
+              {formError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-700 font-medium">
+                  {formError}
+                </div>
+              )}
+
+              <form onSubmit={handleCheckoutSubmit} className="space-y-3.5 pt-1">
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-700 mb-1">
-                    Your Full Name *
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <User size={13} className="text-emerald-600" />
+                      Your Full Name *
+                    </span>
+                  </label>
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    required
+                    placeholder="e.g. Babatunde Alao"
+                    value={checkoutFormData.name}
+                    onChange={(e) =>
+                      setCheckoutFormData({ ...checkoutFormData, name: e.target.value })
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <MapPin size={13} className="text-emerald-600" />
+                      Delivery Address *
+                    </span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Babatunde Alao"
-                    value={addressFormData.name}
+                    placeholder="e.g. 14 Admiralty Way, Lekki Phase 1, Lagos"
+                    value={checkoutFormData.address}
                     onChange={(e) =>
-                      setAddressFormData({ ...addressFormData, name: e.target.value })
+                      setCheckoutFormData({ ...checkoutFormData, address: e.target.value })
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-700 mb-1">
-                    Email Address (for Paystack Receipt) *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="e.g. customer@example.com"
-                    value={addressFormData.email}
-                    onChange={(e) =>
-                      setAddressFormData({ ...addressFormData, email: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-700 mb-1">
-                    Active Phone Number (for Delivery) *
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 mb-1">
+                    <span className="flex items-center gap-1.5">
+                      <Phone size={13} className="text-emerald-600" />
+                      WhatsApp Phone Number *
+                    </span>
                   </label>
                   <input
                     type="tel"
                     required
                     placeholder="e.g. 08012345678"
-                    value={addressFormData.phone}
+                    value={checkoutFormData.whatsapp}
                     onChange={(e) =>
-                      setAddressFormData({ ...addressFormData, phone: e.target.value })
+                      setCheckoutFormData({ ...checkoutFormData, whatsapp: e.target.value })
                     }
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
+                    className="w-full rounded-xl border border-slate-300 bg-slate-50 p-3 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none transition-colors"
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={payingLoading}
-                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-emerald-800 transition-colors disabled:opacity-50"
-                >
-                  <ShieldCheck size={16} />
-                  Proceed to Paystack Popup ({formatNaira(prePayAction.amount)})
-                </button>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 sm:py-4 text-xs sm:text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-emerald-900/10 hover:bg-emerald-700 active:scale-[0.98] transition-all"
+                  >
+                    <MessageCircle size={18} />
+                    <span>Send Order to WhatsApp (Press Enter)</span>
+                  </button>
+                  <p className="mt-2 text-center text-[10px] text-slate-400">
+                    Press <strong>Enter</strong> to instantly launch WhatsApp with your order
+                  </p>
+                </div>
               </form>
             </div>
           </div>
