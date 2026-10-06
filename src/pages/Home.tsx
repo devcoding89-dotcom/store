@@ -17,11 +17,16 @@ import { Footer } from '@/sections/Footer'
 
 import type { Product, CartItem, User } from '@/types/marketplace'
 
+type HomeProps = {
+  currentUser: User
+  onUserChange: (user: User | null) => void
+}
+
 function scrollToShop() {
   document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })
 }
 
-export default function Home() {
+export default function Home({ currentUser, onUserChange }: HomeProps) {
   // ─── Search & Filter ───
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('All')
@@ -43,7 +48,6 @@ export default function Home() {
 
   // ─── Customer Account ───
   const [accountOpen, setAccountOpen] = useState(false)
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
 
   // ─── Track Order ───
   const [trackCode, setTrackCode] = useState('')
@@ -163,6 +167,7 @@ export default function Home() {
         onTrackOrder={handleTrackOrder}
         activeProduct={activeProduct}
         checkoutItems={checkoutItems}
+        currentUser={currentUser}
       />
 
       {/* Product Detail Modal */}
@@ -191,18 +196,16 @@ export default function Home() {
 
       {/* Customer Account Overlay */}
       {accountOpen && (
-        <div className="fixed inset-0 z-[65] flex items-start justify-center overflow-y-auto bg-slate-900/50 backdrop-blur-sm pt-10 pb-10 px-4">
-          <CustomerAccount
-            currentUser={currentUser}
-            onLoginSuccess={(user) => setCurrentUser(user)}
-            onLogout={() => setCurrentUser(null)}
-            onTrackOrder={(code) => {
-              setAccountOpen(false)
-              handleTrackOrder(code)
-            }}
-            onClose={() => setAccountOpen(false)}
-          />
-        </div>
+        <CustomerAccount
+          currentUser={currentUser}
+          onLoginSuccess={onUserChange}
+          onLogout={() => onUserChange(null)}
+          onTrackOrder={(code) => {
+            setAccountOpen(false)
+            handleTrackOrder(code)
+          }}
+          onClose={() => setAccountOpen(false)}
+        />
       )}
       {/* Floating Chat Trigger — quick access on mobile & desktop */}
       {!chatOpen && (

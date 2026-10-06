@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { User, Package, MapPin, Phone, LogOut } from 'lucide-react'
-import { loginUser, registerUser } from '@/lib/api'
+import { useState, useEffect, useCallback } from 'react'
+import { User, Package, MapPin, Phone, LogOut, X } from 'lucide-react'
+import { loginUser, logoutUser, registerUser } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 import { formatNaira } from '@/lib/catalog'
 import type { User as UserType, Order } from '@/types/marketplace'
 
@@ -10,6 +11,7 @@ type CustomerAccountProps = {
   onLogout: () => void
   onTrackOrder: (code: string) => void
   onClose: () => void
+  initialMode?: 'login' | 'register'
 }
 
 export function CustomerAccount({
@@ -18,8 +20,9 @@ export function CustomerAccount({
   onLogout,
   onTrackOrder,
   onClose,
+  initialMode = 'login',
 }: CustomerAccountProps) {
-  const [isRegister, setIsRegister] = useState(false)
+  const [isRegister, setIsRegister] = useState(initialMode === 'register')
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
 
@@ -32,15 +35,10 @@ export function CustomerAccount({
     password: '',
   })
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  useEffect(() => {
-    if (currentUser) {
-      loadMyOrders()
-    }
-  }, [currentUser])
-
-  const loadMyOrders = async () => {
+  const loadMyOrders = useCallback(async () => {
     if (!currentUser) return
     setLoadingOrders(true)
     try {
@@ -54,38 +52,61 @@ export function CustomerAccount({
     } finally {
       setLoadingOrders(false)
     }
-  }
+  }, [currentUser])
+
+  useEffect(() => {
+    if (currentUser) {
+      void loadMyOrders()
+    }
+  }, [currentUser, loadMyOrders])
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setNotice('')
     setSubmitting(true)
 
     try {
       if (isRegister) {
-        const user = await registerUser(formData)
-        onLoginSuccess(user)
+        const result = await registerUser(formData)
+        if (result.needsEmailConfirmation) {
+          setNotice('Account created. Check your email to confirm your account, then sign in.')
+        } else {
+          onLoginSuccess(result.user)
+        }
       } else {
         const user = await loginUser(formData.email, formData.password)
         onLoginSuccess(user)
       }
-    } catch (err: any) {
-      setError(err.message || 'Authentication error')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication error')
     } finally {
       setSubmitting(false)
     }
   }
 
+  const handleLogout = async () => {
+    setError('')
+    try {
+      await logoutUser()
+      onLogout()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not sign out.')
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl text-slate-900 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[65] flex items-center justify-center bg-slate-900/50 px-3 py-4 backdrop-blur-sm sm:p-6" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose()
+    }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="account-title" className="w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 text-slate-900 shadow-2xl sm:max-h-[90vh] sm:p-6">
         <div className="flex items-center justify-between border-b border-slate-200 pb-4">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
               <User size={18} />
             </div>
             <div>
-              <h2 className="font-display text-2xl font-bold leading-tight text-slate-900">
+              <h2 id="account-title" className="font-display text-xl font-bold leading-tight text-slate-900 sm:text-2xl">
                 {currentUser ? `Welcome back, ${currentUser.name.split(' ')[0]}` : 'Customer Account'}
               </h2>
               <p className="text-xs text-slate-500">
@@ -93,8 +114,8 @@ export function CustomerAccount({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-sm text-slate-400 hover:text-red-500 transition-colors">
-            ✕ Close
+          <button onClick={onClose} aria-label="Close account dialog" className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-500">
+            <X size={18} />
           </button>
         </div>
 
@@ -109,13 +130,14 @@ export function CustomerAccount({
                   <p className="text-xs text-slate-500">{currentUser.email}</p>
                 </div>
                 <button
-                  onClick={onLogout}
+                  onClick={handleLogout}
                   className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   <LogOut size={13} />
                   Sign Out
                 </button>
               </div>
+              {error && <p role="alert" className="mt-3 text-xs font-medium text-red-600">{error}</p>}
 
               <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 text-xs">
                 <div className="flex items-center gap-1.5 text-slate-500">
@@ -218,8 +240,18 @@ export function CustomerAccount({
             </div>
 
             {error && (
-              <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-600 font-medium">
+              <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-2.5 text-xs text-red-600 font-medium">
                 {error}
+              </p>
+            )}
+            {notice && (
+              <p role="status" className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                {notice}
+              </p>
+            )}
+            {!supabase && (
+              <p role="alert" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                Add your Supabase project URL and anon key to the app&apos;s <code>.env</code> file to enable accounts.
               </p>
             )}
 
@@ -235,7 +267,7 @@ export function CustomerAccount({
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g. Babatunde Alao"
-                    className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all"
+                    className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-base focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all sm:text-sm"
                   />
                 </div>
               )}
@@ -250,7 +282,7 @@ export function CustomerAccount({
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="you@example.com"
-                  className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-base focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all sm:text-sm"
                 />
               </div>
 
@@ -266,7 +298,7 @@ export function CustomerAccount({
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       placeholder="08012345678"
-                      className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm font-mono focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all"
+                      className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-base font-mono focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all sm:text-sm"
                     />
                   </div>
                   <div>
@@ -278,7 +310,7 @@ export function CustomerAccount({
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       placeholder="Street, Landmark, District"
-                      className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all"
+                      className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-base focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all sm:text-sm"
                     />
                   </div>
                 </>
@@ -291,32 +323,26 @@ export function CustomerAccount({
                 <input
                   type="password"
                   required
+                  minLength={isRegister ? 8 : undefined}
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"
-                  className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-sm font-mono focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all"
+                  className="w-full rounded-lg border border-slate-300 bg-white p-2.5 text-base font-mono focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 focus:outline-none transition-all sm:text-sm"
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !supabase}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 shadow-sm"
               >
                 {submitting ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
               </button>
             </form>
 
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 text-center">
-              💡 Demo Accounts available:
-              <br />
-              <span className="font-bold">admin@townsquare.market</span> / pass: <span className="font-bold">admin</span> (Admin)
-              <br />
-              <span className="font-bold">babatunde@example.com</span> / pass: <span className="font-bold">password123</span>
-            </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }

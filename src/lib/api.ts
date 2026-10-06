@@ -1,4 +1,5 @@
 import type { Product, Order, User, AdminStats } from '@/types/marketplace'
+import { requireSupabase, toAppUser } from '@/lib/supabase'
 
 const API_BASE = '/api'
 
@@ -82,13 +83,10 @@ export async function fetchAdminStats(): Promise<AdminStats> {
 }
 
 export async function trackOrder(code: string): Promise<Order | null> {
-  try {
-    const res = await fetch(`${API_BASE}/orders/track/${encodeURIComponent(code)}`)
-    if (!res.ok) return null
-    return await res.json()
-  } catch {
-    return null
-  }
+  const res = await fetch(`${API_BASE}/orders/track/${encodeURIComponent(code)}`)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error('Order tracking is temporarily unavailable. Please try again.')
+  return await res.json()
 }
 
 export async function createOrder(orderData: Partial<Order>): Promise<Order> {
@@ -97,11 +95,14 @@ export async function createOrder(orderData: Partial<Order>): Promise<Order> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(orderData),
   })
-  if (!res.ok) throw new Error('Failed to place order')
+  if (!res.ok) {
+    const body = await res.json().catch(() => null) as { error?: string } | null
+    throw new Error(body?.error || 'Failed to save your order. Please try again.')
+  }
   return await res.json()
 }
 
-export async function sendChatMessage(message: string, history: any[] = [], currentProductId?: string) {
+export async function sendChatMessage(message: string, history: unknown[] = [], currentProductId?: string) {
   const res = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -147,16 +148,13 @@ export async function verifyPaystackPayment(reference: string) {
 
 
 export async function loginUser(email: string, password: string): Promise<User> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+  const { data, error } = await requireSupabase().auth.signInWithPassword({
+    email,
+    password,
   })
-  if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.error || 'Login failed')
-  }
-  return await res.json()
+  if (error) throw error
+  if (!data.user) throw new Error('Sign-in did not return a user account.')
+  return toAppUser(data.user)
 }
 
 export async function registerUser(userData: {
@@ -165,15 +163,28 @@ export async function registerUser(userData: {
   phone: string
   address?: string
   password: string
-}): Promise<User> {
-  const res = await fetch(`${API_BASE}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(userData),
+}): Promise<{ user: User; needsEmailConfirmation: boolean }> {
+  const { data, error } = await requireSupabase().auth.signUp({
+    email: userData.email,
+    password: userData.password,
+    options: {
+      data: {
+        name: userData.name,
+        phone: userData.phone,
+        address: userData.address ?? '',
+      },
+    },
   })
-  if (!res.ok) {
-    const err = await res.json()
-    throw new Error(err.error || 'Registration failed')
+  if (error) throw error
+  if (!data.user) throw new Error('Account registration did not return a user.')
+
+  return {
+    user: toAppUser(data.user),
+    needsEmailConfirmation: !data.session,
   }
-  return await res.json()
+}
+
+export async function logoutUser(): Promise<void> {
+  const { error } = await requireSupabase().auth.signOut()
+  if (error) throw error
 }

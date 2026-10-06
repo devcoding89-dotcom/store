@@ -283,7 +283,7 @@ class Database {
       delivery_address: orderData.delivery_address,
       delivery_zone: orderData.delivery_zone || 'Zone 1 (Central / Commercial Core)',
       product_id: orderData.product_id,
-      product_name: product ? product.name : (orderData.product_name || 'Product'),
+      product_name: orderData.product_name || (product ? product.name : 'Product'),
       agreed_price: agreedPrice,
       delivery_fee: deliveryFee,
       total_amount: agreedPrice + deliveryFee,

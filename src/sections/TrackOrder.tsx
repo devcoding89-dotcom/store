@@ -71,27 +71,27 @@ export function TrackOrder({ prefill }: { prefill: string }) {
   const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [order, setOrder] = useState<Order | null>(null)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState('')
 
   const fetchTrack = async (targetCode: string) => {
     const trimmed = targetCode.trim().toUpperCase()
     if (!trimmed) return
 
     setLoading(true)
-    setError(false)
+    setError('')
 
     try {
       const res = await trackOrder(trimmed)
       if (res) {
         setOrder(res)
-        setError(false)
+        setError('')
       } else {
         setOrder(null)
-        setError(true)
+        setError(`We couldn't find order ${trimmed}. Check the code and try again.`)
       }
-    } catch {
+    } catch (err) {
       setOrder(null)
-      setError(true)
+      setError(err instanceof Error ? err.message : 'Order tracking is temporarily unavailable. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -154,9 +154,8 @@ export function TrackOrder({ prefill }: { prefill: string }) {
         </Reveal>
 
         {error && (
-          <div className="mt-6 max-w-xl rounded-xl border border-white/30 bg-white/10 p-4 text-sm backdrop-blur-sm">
-            We couldn't find an order with code <strong>{code}</strong>. Please check your order
-            code from Amaka's chat or try again.
+          <div role="alert" className="mt-6 max-w-xl rounded-xl border border-white/30 bg-white/10 p-4 text-sm backdrop-blur-sm">
+            {error}
           </div>
         )}
 

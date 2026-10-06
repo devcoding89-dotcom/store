@@ -12,11 +12,11 @@ import {
   ArrowRight,
   ExternalLink,
 } from 'lucide-react'
-import { sendChatMessage } from '@/lib/api'
+import { createOrder, sendChatMessage } from '@/lib/api'
 import { formatNaira } from '@/lib/catalog'
 import { MARKETPLACE_CONFIG } from '@/lib/config'
 import { QRCodeDisplay } from '@/components/QRCodeDisplay'
-import type { Product, Order, CartItem } from '@/types/marketplace'
+import type { Product, Order, CartItem, User as AppUser } from '@/types/marketplace'
 
 type Message = {
   id: string
@@ -43,6 +43,7 @@ type AINegotiatorChatProps = {
   onTrackOrder: (code: string) => void
   activeProduct?: Product | null
   checkoutItems?: CartItem[] | null
+  currentUser: AppUser
 }
 
 const QUICK_PROMPTS = [
@@ -65,6 +66,7 @@ export function AINegotiatorChat({
   onTrackOrder,
   activeProduct,
   checkoutItems,
+  currentUser,
 }: AINegotiatorChatProps) {
   const ownerWhatsApp = (MARKETPLACE_CONFIG.ownerWhatsApp || '2349138987295').replace(/\D/g, '')
 
@@ -84,6 +86,7 @@ export function AINegotiatorChat({
   // Checkout form modal state
   const [showCheckoutForm, setShowCheckoutForm] = useState(false)
   const [formError, setFormError] = useState('')
+  const [checkoutSubmitting, setCheckoutSubmitting] = useState(false)
   const [checkoutAction, setCheckoutAction] = useState<{
     productId: string
     productName: string
@@ -265,8 +268,8 @@ export function AINegotiatorChat({
     setShowCheckoutForm(true)
   }
 
-  // Handle checkout form submission → redirect to owner's WhatsApp with all details
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
+  // Save the order first so the tracking code points to a real order.
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     const name = checkoutFormData.name.trim()
@@ -278,12 +281,41 @@ export function AINegotiatorChat({
       return
     }
 
-    const orderCode = `ORD-${Date.now().toString().slice(-6)}`
     const itemName = checkoutAction?.productName || activeProduct?.name || 'Selected Items'
-    const agreedAmount = checkoutAction ? formatNaira(checkoutAction.amount) : 'To be confirmed'
+    const productId = checkoutAction?.productId || activeProduct?.id || checkoutItems?.[0]?.product.id
+    const amount = checkoutAction?.amount ?? (
+      checkoutItems?.reduce((sum, item) => sum + item.product.listing_price * item.qty, 0)
+      ?? activeProduct?.listing_price
+      ?? 0
+    )
+    if (!productId || amount <= 0) {
+      setFormError('We could not identify the product or price. Please close checkout and try again.')
+      return
+    }
 
-    // Build the comprehensive WhatsApp message for the store owner
-    const whatsappMessage = `🛒 *NEW ORDER FROM TOWNSQUARE!*
+    const agreedAmount = formatNaira(amount)
+    const isMobile =
+      typeof window !== 'undefined' &&
+      /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    const whatsappTab = isMobile ? null : window.open('about:blank', '_blank')
+    setCheckoutSubmitting(true)
+    setFormError('')
+
+    try {
+      const order = await createOrder({
+        customer_id: currentUser.id,
+        customer_name: name,
+        customer_phone: whatsapp,
+        customer_email: currentUser.email,
+        delivery_address: address,
+        product_id: productId,
+        product_name: itemName,
+        agreed_price: amount,
+        delivery_fee: 800,
+      })
+      const orderCode = order.id
+
+      const whatsappMessage = `🛒 *NEW ORDER FROM TOWNSQUARE!*
 
 📦 *Item:* ${itemName}
 💰 *Agreed Price:* ${agreedAmount}
@@ -294,40 +326,36 @@ export function AINegotiatorChat({
 
 💬 *Message:* Hello, I discussed this order with Amaka on TownSquare and agreed to place it. Please confirm and arrange dispatch to my address!`
 
-    // Encode for WhatsApp URL
-    const encodedMsg = encodeURIComponent(whatsappMessage)
-    const whatsappUrl = `https://wa.me/${ownerWhatsApp}?text=${encodedMsg}`
+      const whatsappUrl = `https://wa.me/${ownerWhatsApp}?text=${encodeURIComponent(whatsappMessage)}`
 
-    // Close the form
-    setShowCheckoutForm(false)
+      setShowCheckoutForm(false)
 
-    // Add confirmation message in chat with tracking code and one-tap re-open link
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `checkout-${Date.now()}`,
-        role: 'assistant',
-        content: `✅ **Order Details Received!**\n\n📦 **Item:** ${itemName}\n💰 **Price:** ${agreedAmount}\n👤 **Name:** ${name}\n📍 **Address:** ${address}\n📞 **WhatsApp:** ${whatsapp}\n🧾 **Order Code:** \`${orderCode}\`\n\nRedirecting you to WhatsApp to complete your order with the owner. If WhatsApp did not open automatically, tap the green button below!`,
-        time: getTimestamp(),
-        trackingCode: orderCode,
-        whatsappUrl,
-      },
-    ])
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `checkout-${Date.now()}`,
+          role: 'assistant',
+          content: `✅ **Order saved!**\n\n📦 **Item:** ${itemName}\n💰 **Price:** ${agreedAmount}\n👤 **Name:** ${name}\n📍 **Address:** ${address}\n📞 **WhatsApp:** ${whatsapp}\n🧾 **Order Code:** \`${orderCode}\`\n\nYour order is saved and can now be tracked. Continue to WhatsApp to confirm it with the owner.`,
+          time: getTimestamp(),
+          trackingCode: orderCode,
+          whatsappUrl,
+        },
+      ])
 
-    // Reset form data
-    setCheckoutFormData({ name: '', address: '', whatsapp: '' })
-    setFormError('')
+      setCheckoutFormData({ name: '', address: '', whatsapp: '' })
 
-    // Mobile-friendly redirect to WhatsApp
-    const isMobile =
-      typeof window !== 'undefined' &&
-      /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-
-    if (isMobile) {
-      window.location.href = whatsappUrl
-    } else {
-      window.open(whatsappUrl, '_blank')
+      if (whatsappTab) {
+        whatsappTab.location.href = whatsappUrl
+      } else {
+        window.location.assign(whatsappUrl)
+      }
+    } catch (err) {
+      whatsappTab?.close()
+      setFormError(err instanceof Error ? err.message : 'We could not save your order. Please try again.')
+    } finally {
+      setCheckoutSubmitting(false)
     }
+
   }
 
   if (!isOpen) return null
@@ -583,7 +611,7 @@ export function AINegotiatorChat({
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                Fill in your details below. Once you press <strong>Enter</strong>, it will take you directly to the owner's WhatsApp with all your order information ready to send!
+                Fill in your details below. We&apos;ll save your order and tracking code, then open WhatsApp so you can confirm with the owner.
               </p>
 
               {formError && (
@@ -654,13 +682,14 @@ export function AINegotiatorChat({
                 <div className="pt-2">
                   <button
                     type="submit"
+                    disabled={checkoutSubmitting}
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 sm:py-4 text-xs sm:text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-emerald-900/10 hover:bg-emerald-700 active:scale-[0.98] transition-all"
                   >
                     <MessageCircle size={18} />
-                    <span>Send Order to WhatsApp (Press Enter)</span>
+                    <span>{checkoutSubmitting ? 'Saving order...' : 'Save Order & Continue to WhatsApp'}</span>
                   </button>
                   <p className="mt-2 text-center text-[10px] text-slate-400">
-                    Press <strong>Enter</strong> to instantly launch WhatsApp with your order
+                    Your order will be saved before WhatsApp opens.
                   </p>
                 </div>
               </form>
