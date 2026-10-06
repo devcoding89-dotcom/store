@@ -180,7 +180,7 @@ export function Featured({
                       </span>
                       <span className="truncate max-w-[130px] flex items-center gap-1">
                         <CheckCircle2 size={12} className="text-emerald-600" />
-                        {p.vendor_name}
+                        TownSquare
                       </span>
                     </div>
 

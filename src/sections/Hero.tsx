@@ -26,7 +26,7 @@ export function Hero({
             {/* Tagline pill */}
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50/80 px-3.5 py-1 text-xs font-semibold text-emerald-800 w-fit mb-5 shadow-xs">
               <span className="flex h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
-              Verified Citywide Marketplace · Live Stalls
+              TownSquare Marketplace
             </div>
 
             <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-[1.12]">
@@ -34,7 +34,7 @@ export function Hero({
             </h1>
 
             <p className="mt-5 text-base sm:text-lg text-slate-600 leading-relaxed max-w-2xl font-normal">
-              Direct from verified stalls across the city. Negotiate prices in real-time with our sales desk manager, order via WhatsApp, and get tracked delivery to your door.
+              Shop everyday finds with TownSquare. Ask our sales desk questions, discuss prices, place your order, and follow delivery updates all in one place.
             </p>
 
             {/* Big prominent search box */}
@@ -94,8 +94,8 @@ export function Hero({
                   <ShieldCheck size={18} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-800">100% Genuine</p>
-                  <p className="text-[11px] text-slate-500">Inspected stalls</p>
+                  <p className="text-xs font-bold text-slate-800">TownSquare support</p>
+                  <p className="text-[11px] text-slate-500">Help with your order</p>
                 </div>
               </div>
 
@@ -115,7 +115,7 @@ export function Hero({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-slate-800">WhatsApp Alert</p>
-                  <p className="text-[11px] text-slate-500">Direct to owner</p>
+                  <p className="text-[11px] text-slate-500">TownSquare support</p>
                 </div>
               </div>
             </div>

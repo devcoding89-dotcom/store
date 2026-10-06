@@ -22,7 +22,7 @@ export function Footer() {
               Good things, <span className="text-emerald-400">close to home.</span>
             </h2>
             <p className="mt-4 max-w-lg text-base leading-relaxed text-slate-400">
-              New arrivals on Mondays, seller spotlights on Wednesdays, deals on Fridays. One email a
+              New arrivals, helpful shopping tips, and occasional deals. One email a
               week — never more.
             </p>
           </Reveal>
@@ -65,7 +65,7 @@ export function Footer() {
             <span className="font-display text-xl font-bold">{MARKETPLACE_CONFIG.name}</span>
           </div>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">
-            The place where people find and buy from verified local businesses across the city.
+            Shop through TownSquare and get help with your orders from one place.
           </p>
           <div className="mt-4 flex gap-3">
             <a href="#" className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-emerald-600 hover:text-white transition-colors">

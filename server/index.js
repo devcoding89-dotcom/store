@@ -30,13 +30,23 @@ app.get('/api/products', (req, res) => {
     products = products.filter(
       (p) =>
         p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.vendor_name.toLowerCase().includes(q)
+        p.category.toLowerCase().includes(q)
     )
   }
 
-  // Hide confidential vendor_cost and floor_price from public buyers
-  const safeProducts = products.map(({ vendor_cost, floor_price, ...rest }) => rest)
+  // Keep supplier contacts and internal cost/margin details server-side.
+  const supplierFields = new Set([
+    'vendor_cost',
+    'floor_price',
+    'vendor_phone',
+    'vendor_name',
+    'vendor_stall_location',
+  ])
+  const safeProducts = products.map((product) => ({
+    ...Object.fromEntries(Object.entries(product).filter(([key]) => !supplierFields.has(key))),
+    vendor_name: 'TownSquare Marketplace',
+    vendor_stall_location: 'Online store',
+  }))
   res.json(safeProducts)
 })
 

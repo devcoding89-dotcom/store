@@ -40,8 +40,8 @@ function buildTimeline(order: Order): Step[] {
       current: !isPaid,
     },
     {
-      label: 'Market Vendor Notified & Goods Packaged',
-      time: isVendorNotified ? 'Package inspected & prepared' : 'Pending vendor pickup',
+      label: 'Order sent for preparation',
+      time: isVendorNotified ? 'Preparation has started' : 'Waiting for preparation',
       done: isVendorNotified,
       current: isPaid && !isVendorNotified,
     },

@@ -11,8 +11,8 @@ type LandingProps = {
 const benefits = [
   {
     icon: BadgeCheck,
-    title: 'Verified local sellers',
-    description: 'Shop with more confidence. We bring trusted marketplace sellers together in one place.',
+    title: 'One place to shop',
+    description: 'Browse a growing selection and place orders through TownSquare.',
   },
   {
     icon: Sparkles,
@@ -47,11 +47,11 @@ const shoppingFeatures = [
 const faqs = [
   {
     question: 'Do I need an account to browse the marketplace?',
-    answer: 'Yes. Create an account or sign in first; the marketplace is available to signed-in customers.',
+    answer: 'Yes. Create an account or sign in first; the TownSquare store is available to signed-in customers.',
   },
   {
     question: 'What do I need to create an account?',
-    answer: 'Use an email address and password, and provide your name and delivery phone number. You can also add an address for easier checkout.',
+    answer: 'Use an email address and password, and provide your name and delivery phone number. You can also add an address for easier TownSquare checkout.',
   },
   {
     question: 'Why am I being asked to confirm my email?',
@@ -59,7 +59,7 @@ const faqs = [
   },
   {
     question: 'Can I ask about a product or price?',
-    answer: 'Yes. Once you sign in, use the marketplace chat to ask questions or discuss an item with the sales assistant.',
+    answer: 'Yes. Once you sign in, use the TownSquare chat to ask questions or discuss an item with our sales desk.',
   },
   {
     question: 'How do I check an order?',
@@ -142,7 +142,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               Right around you.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
-              Discover everyday essentials from local sellers, ask questions, bargain with Amaka, and keep your orders together in one simple marketplace.
+              Discover everyday essentials with TownSquare, ask questions, bargain with Amaka, and keep your orders together in one simple store.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button onClick={() => openAuth(true)} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-emerald-700 px-7 text-sm font-bold text-white shadow-xl shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-emerald-800">
@@ -180,14 +180,14 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                       <span className="h-6 w-6 rounded-full border-2 border-white bg-rose-300" />
                       <span className="h-6 w-6 rounded-full border-2 border-white bg-sky-300" />
                     </span>
-                    Local sellers, one friendly place
+                    TownSquare shopping, made simple
                   </div>
                 </div>
               </div>
             </div>
             <div className="absolute -left-3 top-8 hidden items-center gap-3 rounded-2xl border border-white bg-white px-4 py-3 shadow-xl sm:flex lg:-left-12">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800"><BadgeCheck size={20} /></span>
-              <span><span className="block text-sm font-extrabold">Verified sellers</span><span className="text-xs text-slate-500">Shop with confidence</span></span>
+              <span><span className="block text-sm font-extrabold">TownSquare support</span><span className="text-xs text-slate-500">Help with your order</span></span>
             </div>
           </div>
         </section>
@@ -273,7 +273,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           <div className="grid gap-3 sm:grid-cols-3">
             {[
               ['01', 'Create your account', 'A quick sign-up gets you into the marketplace.'],
-              ['02', 'Explore local finds', 'Browse products and talk with sellers.'],
+              ['02', 'Explore the collection', 'Browse products and chat with TownSquare.'],
               ['03', 'Order with confidence', 'Keep your delivery details and orders together.'],
             ].map(([number, title, description]) => (
               <div key={number} className="rounded-2xl border border-slate-200 bg-white p-5">

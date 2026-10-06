@@ -107,9 +107,6 @@ export function CartDrawer({
                     <p className="font-display text-sm font-bold text-slate-900 leading-snug line-clamp-1">
                       {product.name}
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-500 font-medium">
-                      Stall: {product.vendor_name}
-                    </p>
                     <p className="text-xs font-bold text-emerald-700 mt-1">
                       {formatNaira(product.listing_price)}
                     </p>

@@ -9,7 +9,7 @@ const termsSections = [
   {
     title: '1. About TownSquare',
     paragraphs: [
-      'TownSquare Marketplace helps customers discover products offered by marketplace sellers and contact the store about orders. Unless a listing says otherwise, the product is offered by the seller shown in the marketplace, not manufactured by TownSquare.',
+      'TownSquare is the retailer for orders placed through this store and is your point of contact for payment, order support, returns, and delivery. We may source or dispatch products with the help of fulfillment partners. TownSquare does not claim to manufacture products unless a listing explicitly says so; product brand and manufacturer details should be checked on the listing or packaging.',
       'The store’s legal business name, registered address, and support contact should be added here before these terms are treated as final.',
     ],
   },
@@ -23,21 +23,21 @@ const termsSections = [
   {
     title: '3. Listings, prices, and availability',
     paragraphs: [
-      'We aim to keep product descriptions, photographs, prices, and availability current, but seller-provided information may change or contain errors. A listing is not a confirmed order or a guarantee that an item remains available.',
+      'We aim to keep product descriptions, photographs, prices, and availability current. Product details or availability may change or contain errors. A listing is not a confirmed order or a guarantee that an item remains available.',
       'Any negotiated price, delivery charge, payment method, and order details should be confirmed with the store before an order is fulfilled. Do not send payment to an account that has not been confirmed by the store.',
     ],
   },
   {
     title: '4. Orders, payment, and delivery',
     paragraphs: [
-      'An order request is subject to seller availability and confirmation. The store should confirm the final item, total amount, delivery destination, estimated delivery arrangement, and payment instructions with you.',
+      'An order request is subject to availability and TownSquare confirmation. TownSquare should confirm the final item, total amount, delivery destination, estimated delivery arrangement, and payment instructions with you.',
       'Delivery estimates are estimates, not guaranteed arrival times. You are responsible for providing a complete address and reachable phone number. The store should be contacted promptly if delivery details need to change.',
     ],
   },
   {
     title: '5. Acceptable use',
     paragraphs: [
-      'Do not use the marketplace to break the law, submit false order or account information, interfere with the service, access another person’s account, or harass sellers, staff, or other customers.',
+      'Do not use the marketplace to break the law, submit false order or account information, interfere with the service, access another person’s account, or harass staff, suppliers, or other customers.',
     ],
   },
   {
@@ -107,11 +107,15 @@ const faqItems = [
   },
   {
     question: 'How do I find products?',
-    answer: 'After signing in, browse the available categories or search the marketplace. Product availability and details may change, so confirm important details with the seller before placing an order.',
+    answer: 'After signing in, browse categories or search products. TownSquare is your retailer and order contact; availability and product details may change, so ask TownSquare to confirm important details before ordering.',
   },
   {
     question: 'How do I place an order?',
-    answer: 'Add products to your cart or discuss an item with Amaka. Enter your name, delivery address, and contact number at checkout. The app saves an order code, then opens WhatsApp so you can confirm the details with the store.',
+    answer: 'Add products to your cart or discuss an item with Amaka. Enter your name, delivery address, and contact number at checkout. TownSquare saves an order code and opens WhatsApp so you can confirm the details with our team. Fulfillment partners may help prepare or deliver some orders.',
+  },
+  {
+    question: 'Who is responsible for my order?',
+    answer: 'TownSquare is the retailer and your contact for payment, order support, returns, and delivery. Fulfillment partners may help prepare or dispatch products, but you place and manage your order through TownSquare.',
   },
   {
     question: 'How do I track an order?',
@@ -199,7 +203,7 @@ export function PublicInfo({ page }: { page: PublicInfoPage }) {
       <div className={`mt-8 flex gap-3 rounded-2xl border p-4 ${isDraft ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-blue-200 bg-blue-50 text-blue-950'}`}>
         {isDraft ? <ShieldCheck className="mt-0.5 shrink-0" size={19} /> : <FileText className="mt-0.5 shrink-0" size={19} />}
         <p className="text-sm leading-6">
-          <strong>{isDraft ? 'Proposed starter policy — review before launch.' : 'Draft for the store owner to review before launch.'}</strong>{' '}
+          <strong>{isDraft ? 'Proposed starter policy — review before launch.' : 'Draft pending TownSquare approval before launch.'}</strong>{' '}
           {isDraft
             ? 'The return windows and cost rules below are suggested defaults, not confirmed business policy. Replace or approve them with your actual rules.'
             : 'This general template is not legal advice. Add your verified business identity, contact details, applicable local requirements, and have the final text reviewed.'}

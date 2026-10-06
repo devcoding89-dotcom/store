@@ -16,15 +16,19 @@ export function ProductDetailModal({
   onAddToCart,
   onNegotiate,
 }: ProductDetailModalProps) {
-  if (!product) return null
+  const [selectedImage, setSelectedImage] = useState<{ productId: string; url: string } | null>(null)
 
-  // Support multiple images gallery if available
-  const allImages =
-    product.images && product.images.length > 0
+  const allImages = product
+    ? product.images && product.images.length > 0
       ? product.images
       : [product.image]
+    : []
 
-  const [selectedImage, setSelectedImage] = useState(allImages[0] || product.image)
+  const activeImage = product && selectedImage?.productId === product.id
+    ? selectedImage.url
+    : product?.images?.[0] || product?.image || ''
+
+  if (!product) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-fade-in">
@@ -43,7 +47,7 @@ export function ProductDetailModal({
           <div className="flex flex-col gap-3">
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 aspect-square shadow-xs">
               <img
-                src={selectedImage}
+                src={activeImage}
                 alt={product.name}
                 className="h-full w-full object-cover transition-all"
               />
@@ -55,9 +59,9 @@ export function ProductDetailModal({
                 {allImages.map((img: string, idx: number) => (
                   <button
                     key={idx}
-                    onClick={() => setSelectedImage(img)}
+                    onClick={() => setSelectedImage({ productId: product.id, url: img })}
                     className={`h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
-                      selectedImage === img
+                      activeImage === img
                         ? 'border-emerald-600 shadow-md ring-2 ring-emerald-100'
                         : 'border-slate-200 opacity-70 hover:opacity-100'
                     }`}
@@ -99,21 +103,21 @@ export function ProductDetailModal({
                 </span>
               </div>
 
-              {/* Vendor & Stall info */}
+              {/* Store and support information */}
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800">
                   <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                  <span>Verified Stall: {product.vendor_name}</span>
+                  <span>Sold by TownSquare</span>
                 </div>
                 <p className="mt-1 text-slate-500 pl-5 text-[11px]">
-                  📍 {product.vendor_stall_location}
+                  TownSquare handles your order and customer support.
                 </p>
               </div>
 
               {/* Description */}
               <p className="mt-4 text-sm text-slate-600 leading-relaxed font-normal">
                 {product.description ||
-                  'Authentic, hand-selected product verified directly from our marketplace vendor. Quality checked before dispatch.'}
+                  'Product details and order support are provided by TownSquare. Contact us if you need more information before ordering.'}
               </p>
 
               {/* Features List */}

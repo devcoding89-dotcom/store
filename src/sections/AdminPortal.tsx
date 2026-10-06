@@ -4,7 +4,6 @@ import {
   Plus,
   Trash2,
   Edit3,
-  MessageCircle,
   RefreshCw,
   X,
   Upload,
@@ -65,6 +64,9 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   const [orderSearch, setOrderSearch] = useState('')
   const [loadError, setLoadError] = useState('')
   const [paymentUpdatingId, setPaymentUpdatingId] = useState<string | null>(null)
+  const [vendorNotifyPreparedId, setVendorNotifyPreparedId] = useState<string | null>(null)
+  const [vendorNotifyError, setVendorNotifyError] = useState('')
+  const [vendorNotifyErrorId, setVendorNotifyErrorId] = useState<string | null>(null)
 
   // Add/Edit Product Modal State
   const [showProductModal, setShowProductModal] = useState(false)
@@ -144,9 +146,11 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
     try {
       await updateOrderStatus(orderId, newStatus)
       await loadData()
+      return true
     } catch (err) {
       console.error('Failed to update order status:', err)
       setLoadError('The order status could not be saved. Please try again.')
+      return false
     }
   }
 
@@ -161,6 +165,42 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
       setLoadError('Payment confirmation could not be saved. Please try again.')
     } finally {
       setPaymentUpdatingId(null)
+    }
+  }
+
+  const handleOpenVendorWhatsApp = (order: Order) => {
+    const digits = (order.vendor_phone || '').replace(/\D/g, '')
+    const phone =
+      digits.startsWith('00') ? digits.slice(2)
+      : digits.startsWith('0') && digits.length === 11 ? `234${digits.slice(1)}`
+      : digits.length === 10 ? `234${digits}`
+      : digits
+
+    if (!phone || phone.length < 10 || phone.length > 15) {
+      setVendorNotifyError(`Add a valid WhatsApp number for ${order.vendor_name} in the product details, then try again.`)
+      setVendorNotifyErrorId(order.id)
+      return
+    }
+
+    const message = `Hello, this is TownSquare order support. Please prepare "${order.product_name}" for pickup. Agreed supplier cost: ₦${order.vendor_cost.toLocaleString()}. Our dispatch team will arrange collection. Order reference: ${order.id}.`
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
+    const whatsappWindow = window.open(whatsappUrl, '_blank')
+
+    if (!whatsappWindow) {
+      setVendorNotifyError('Your browser blocked the WhatsApp window. Allow pop-ups for this site and try again.')
+      setVendorNotifyErrorId(order.id)
+      return
+    }
+    whatsappWindow.opener = null
+
+    setVendorNotifyError('')
+    setVendorNotifyErrorId(null)
+    setVendorNotifyPreparedId(order.id)
+  }
+
+  const handleMarkVendorNotified = async (orderId: string) => {
+    if (await handleStatusChange(orderId, 'VENDOR_NOTIFIED')) {
+      setVendorNotifyPreparedId(null)
     }
   }
 
@@ -680,7 +720,7 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
                     {/* Vendor Stall & Dispatch Action */}
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Vendor to Pickup From
+                        Fulfillment Partner
                       </p>
                       <p className="text-sm font-semibold text-slate-900 mt-1">
                         {ord.vendor_name}
@@ -689,17 +729,14 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
                         Phone: {ord.vendor_phone || 'In Database'}
                       </p>
 
-                      <a
-                        href={`https://wa.me/${ord.vendor_phone?.replace(/\D/g, '') || '2349138987295'}?text=${encodeURIComponent(
-                          `Hello ${ord.vendor_name}, we have a confirmed order for "${ord.product_name}". Please package it, our dispatch rider will come pick it up with ₦${ord.vendor_cost.toLocaleString()}. Ref: ${ord.id}`
-                        )}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors"
-                      >
-                        <MessageCircle size={14} />
-                        Alert Vendor on WhatsApp
-                      </a>
+                      {vendorNotifyPreparedId === ord.id && (
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          WhatsApp opens a draft. Press Send there, then return here to update the order.
+                        </p>
+                      )}
+                      {vendorNotifyErrorId === ord.id && vendorNotifyError && (
+                        <p role="alert" className="mt-2 text-xs text-red-700">{vendorNotifyError}</p>
+                      )}
                     </div>
                   </div>
 
@@ -717,14 +754,21 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
                       )}
                       <span className="text-xs font-medium text-slate-500">Update Status:</span>
                       <button
-                        onClick={() => handleStatusChange(ord.id, 'VENDOR_NOTIFIED')}
+                        onClick={() => vendorNotifyPreparedId === ord.id
+                          ? handleMarkVendorNotified(ord.id)
+                          : handleOpenVendorWhatsApp(ord)}
+                        disabled={ord.status === 'VENDOR_NOTIFIED'}
                         className={`rounded-lg px-2.5 py-1 text-xs font-semibold border ${
                           ord.status === 'VENDOR_NOTIFIED'
                             ? 'bg-purple-600 text-white border-purple-600'
                             : 'border-slate-200 hover:bg-slate-50'
                         }`}
                       >
-                        Vendor Notified
+                        {ord.status === 'VENDOR_NOTIFIED'
+                          ? 'Vendor Notified'
+                          : vendorNotifyPreparedId === ord.id
+                            ? 'I sent it — mark notified'
+                            : 'Notify fulfillment partner'}
                       </button>
                       <button
                         onClick={() => handleStatusChange(ord.id, 'DISPATCHED')}

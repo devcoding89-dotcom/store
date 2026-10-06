@@ -7,28 +7,28 @@ const STEPS = [
     n: '01',
     icon: Search,
     title: 'Search or Chat with Sales Desk',
-    body: 'Type what you need or chat directly with our sales desk. She checks live shelf stock across all verified stalls in seconds.',
+    body: 'Type what you need or chat with the TownSquare sales desk. We will check availability and help with your order.',
     color: 'bg-emerald-50 text-emerald-600',
   },
   {
     n: '02',
     icon: Eye,
     title: 'See the Real Product',
-    body: 'Actual prices, actual pictures, actual availability — straight from the seller\'s shelf, not an outdated catalogue.',
+    body: 'Review product details and the listed price. Ask TownSquare if you need clarification before ordering.',
     color: 'bg-blue-50 text-blue-600',
   },
   {
     n: '03',
     icon: CreditCard,
-    title: 'Negotiate & Pay',
-    body: `Bargain with our sales agent or pay listed price. Order via WhatsApp and get an instant order code — something like ${MARKETPLACE_CONFIG.orderPrefix}-48291.`,
+    title: 'Order with TownSquare',
+    body: `Discuss your price with our sales desk or pay the listed price. Submit your order and receive a code — something like ${MARKETPLACE_CONFIG.orderPrefix}-48291.`,
     color: 'bg-amber-50 text-amber-600',
   },
   {
     n: '04',
     icon: Truck,
     title: 'Track to Your Door',
-    body: 'Follow every step with your code. The seller packages, our dispatch delivers, you confirm — simple as that.',
+    body: 'Follow order updates with your code. TownSquare coordinates preparation and delivery, then you can confirm receipt.',
     color: 'bg-purple-50 text-purple-600',
   },
 ]
@@ -46,7 +46,7 @@ export function HowItWorks() {
               From search to doorstep, <span className="text-emerald-600">four steps</span>
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-base text-slate-600">
-              We've made buying from verified local sellers as simple as possible.
+              We've made shopping and following up with TownSquare straightforward.
             </p>
           </div>
         </Reveal>
@@ -85,7 +85,7 @@ export function HowItWorks() {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Sellers paid after delivery confirmation
+              Order updates from TownSquare
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />

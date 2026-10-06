@@ -34,9 +34,7 @@ export function Categories({ onPick }: { onPick: (category: string) => void }) {
                 <p className="text-sm font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors">
                   {cat.name}
                 </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  {cat.stalls} stalls
-                </p>
+                <p className="mt-0.5 text-xs text-slate-500">Shop this category</p>
               </div>
               {/* Emerald accent bar on hover */}
               <div className="absolute bottom-0 left-0 h-0.5 w-full bg-emerald-500 transform scale-x-0 origin-left transition-transform duration-300 group-hover:scale-x-100" />

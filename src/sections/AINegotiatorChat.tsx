@@ -346,7 +346,7 @@ export function AINegotiatorChat({
 📞 *Customer WhatsApp:* ${whatsapp}
 🧾 *Order Code:* ${orderCode}
 
-💬 *Message:* Hello, I discussed this order with Amaka on TownSquare and agreed to place it. Please confirm and arrange dispatch to my address!`
+💬 *Message:* Hello, I discussed this order with Amaka at TownSquare and would like to confirm it. Please confirm the details and arrange delivery to my address.`
 
       const whatsappUrl = `https://wa.me/${ownerWhatsApp}?text=${encodeURIComponent(whatsappMessage)}`
 
@@ -357,7 +357,7 @@ export function AINegotiatorChat({
         {
           id: `checkout-${Date.now()}`,
           role: 'assistant',
-          content: `✅ **Order saved!**\n\n📦 **Item:** ${itemName}\n💰 **Price:** ${agreedAmount}\n👤 **Name:** ${name}\n📍 **Address:** ${address}\n📞 **WhatsApp:** ${whatsapp}\n🧾 **Order Code:** \`${orderCode}\`\n\nYour order is saved and can now be tracked. Continue to WhatsApp to confirm it with the owner.`,
+          content: `✅ **Order saved!**\n\n📦 **Item:** ${itemName}\n💰 **Price:** ${agreedAmount}\n👤 **Name:** ${name}\n📍 **Address:** ${address}\n📞 **WhatsApp:** ${whatsapp}\n🧾 **Order Code:** \`${orderCode}\`\n\nYour order is saved and can now be tracked. Continue to WhatsApp to confirm the details with the TownSquare team.`,
           time: getTimestamp(),
           trackingCode: orderCode,
           whatsappUrl,
@@ -633,7 +633,7 @@ export function AINegotiatorChat({
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                Fill in your details below. We&apos;ll save your order and tracking code, then open WhatsApp so you can confirm with the owner.
+                Fill in your details below. We&apos;ll save your order and tracking code, then open WhatsApp so you can confirm with the TownSquare team.
               </p>
 
               {formError && (
