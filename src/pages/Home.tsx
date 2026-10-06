@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { MessageCircle } from 'lucide-react'
 import { Header } from '@/sections/Header'
 import { Hero } from '@/sections/Hero'
@@ -14,6 +14,7 @@ import { ProductDetailModal } from '@/sections/ProductDetailModal'
 import { AdminPortal } from '@/sections/AdminPortal'
 import { CustomerAccount } from '@/sections/CustomerAccount'
 import { Footer } from '@/sections/Footer'
+import { loadShoppingState, saveShoppingState } from '@/lib/shoppingState'
 
 import type { Product, CartItem, User } from '@/types/marketplace'
 
@@ -27,12 +28,14 @@ function scrollToShop() {
 }
 
 export default function Home({ currentUser, onUserChange }: HomeProps) {
+  const [savedShoppingState] = useState(() => loadShoppingState(currentUser.id))
+
   // ─── Search & Filter ───
-  const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('All')
+  const [query, setQuery] = useState(savedShoppingState.query)
+  const [category, setCategory] = useState(savedShoppingState.category)
 
   // ─── Cart ───
-  const [cart, setCart] = useState<CartItem[]>([])
+  const [cart, setCart] = useState<CartItem[]>(savedShoppingState.cart)
   const [cartOpen, setCartOpen] = useState(false)
 
   // ─── AI Negotiator (Amaka) ───
@@ -51,6 +54,10 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
 
   // ─── Track Order ───
   const [trackCode, setTrackCode] = useState('')
+
+  useEffect(() => {
+    saveShoppingState(currentUser.id, { cart, query, category })
+  }, [currentUser.id, cart, query, category])
 
   // ─── Handlers ───
   const search = useCallback((q: string) => {
