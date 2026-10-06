@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   TrendingUp,
   Plus,
@@ -12,6 +12,8 @@ import {
   QrCode,
   Search,
   Check,
+  Camera,
+  CameraOff,
 } from 'lucide-react'
 import {
   fetchAdminProducts,
@@ -20,6 +22,7 @@ import {
   deleteAdminProduct,
   fetchAdminOrders,
   updateOrderStatus,
+  markOrderPaid,
   fetchAdminStats,
   confirmOrderDelivery,
 } from '@/lib/api'
@@ -38,6 +41,20 @@ const DEFAULT_CATEGORIES = [
   'General',
 ]
 
+type DetectedQrCode = { rawValue: string }
+type QrDetector = { detect: (source: HTMLVideoElement) => Promise<DetectedQrCode[]> }
+type QrDetectorConstructor = new (options: { formats: string[] }) => QrDetector
+
+function getOrderCode(value: string) {
+  const trimmedValue = value.trim()
+  try {
+    const url = new URL(trimmedValue)
+    return (url.searchParams.get('code') || url.pathname.split('/').filter(Boolean).pop() || trimmedValue).toUpperCase()
+  } catch {
+    return trimmedValue.toUpperCase()
+  }
+}
+
 export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [products, setProducts] = useState<Product[]>([])
@@ -45,6 +62,9 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'delivery'>('orders')
   const [loading, setLoading] = useState(true)
   const [orderFilter, setOrderFilter] = useState<string>('ALL')
+  const [orderSearch, setOrderSearch] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [paymentUpdatingId, setPaymentUpdatingId] = useState<string | null>(null)
 
   // Add/Edit Product Modal State
   const [showProductModal, setShowProductModal] = useState(false)
@@ -85,9 +105,15 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   const [deliverySignature, setDeliverySignature] = useState('')
   const [deliveryConfirming, setDeliveryConfirming] = useState(false)
   const [deliverySuccessMessage, setDeliverySuccessMessage] = useState('')
+  const [deliveryError, setDeliveryError] = useState('')
+  const [cameraActive, setCameraActive] = useState(false)
+  const [cameraError, setCameraError] = useState('')
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const cameraCleanupRef = useRef<(() => void) | null>(null)
 
   const loadData = async () => {
     setLoading(true)
+    setLoadError('')
     try {
       const [s, p, o] = await Promise.all([
         fetchAdminStats(),
@@ -99,6 +125,7 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
       setOrders(o)
     } catch (err) {
       console.error('Failed to load admin data:', err)
+      setLoadError('Could not load orders from the database. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -108,9 +135,33 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
     loadData()
   }, [])
 
+  useEffect(() => () => cameraCleanupRef.current?.(), [])
+  useEffect(() => {
+    if (activeTab !== 'delivery') cameraCleanupRef.current?.()
+  }, [activeTab])
+
   const handleStatusChange = async (orderId: string, newStatus: string) => {
-    await updateOrderStatus(orderId, newStatus)
-    loadData()
+    try {
+      await updateOrderStatus(orderId, newStatus)
+      await loadData()
+    } catch (err) {
+      console.error('Failed to update order status:', err)
+      setLoadError('The order status could not be saved. Please try again.')
+    }
+  }
+
+  const handleConfirmPayment = async (orderId: string) => {
+    setPaymentUpdatingId(orderId)
+    setLoadError('')
+    try {
+      await markOrderPaid(orderId)
+      await loadData()
+    } catch (err) {
+      console.error('Failed to confirm customer payment:', err)
+      setLoadError('Payment confirmation could not be saved. Please try again.')
+    } finally {
+      setPaymentUpdatingId(null)
+    }
   }
 
   const handleDeleteProduct = async (id: string) => {
@@ -263,16 +314,84 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   }
 
   // Lookup order for QR delivery
-  const handleLookupOrderForDelivery = () => {
-    const code = deliveryCodeInput.trim().toUpperCase()
+  const handleLookupOrderForDelivery = (value = deliveryCodeInput) => {
+    const code = getOrderCode(value)
     if (!code) return
 
     const order = orders.find((o) => o.id === code)
     if (order) {
       setScannedOrder(order)
       setDeliverySuccessMessage('')
+      setDeliveryError('')
     } else {
-      alert(`Order ${code} not found in database. Please check code.`)
+      setScannedOrder(null)
+      setDeliveryError(`Order ${code} was not found. Check the code or refresh the order list.`)
+    }
+  }
+
+  const startQrCamera = async () => {
+    setCameraError('')
+    const Detector = (window as Window & { BarcodeDetector?: QrDetectorConstructor }).BarcodeDetector
+    if (!Detector) {
+      setCameraError('Camera QR scanning is not supported in this browser. Enter the order code manually instead.')
+      return
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Camera access is unavailable. Open this page over HTTPS or enter the code manually.')
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+      const video = videoRef.current
+      if (!video) {
+        stream.getTracks().forEach((track) => track.stop())
+        setCameraError('The camera preview could not be started. Enter the code manually instead.')
+        return
+      }
+
+      video.srcObject = stream
+      await video.play()
+      const detector = new Detector({ formats: ['qr_code'] })
+      let animationFrame = 0
+      let stopped = false
+      const cleanup = () => {
+        stopped = true
+        cancelAnimationFrame(animationFrame)
+        stream.getTracks().forEach((track) => track.stop())
+        video.srcObject = null
+        cameraCleanupRef.current = null
+        setCameraActive(false)
+      }
+      cameraCleanupRef.current = cleanup
+      setCameraActive(true)
+
+      const scanFrame = async () => {
+        if (stopped) return
+        if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          try {
+            const [result] = await detector.detect(video)
+            if (stopped) return
+            if (result?.rawValue) {
+              const code = getOrderCode(result.rawValue)
+              setDeliveryCodeInput(code)
+              cleanup()
+              handleLookupOrderForDelivery(code)
+              return
+            }
+          } catch (err) {
+            console.error('QR camera scan failed:', err)
+            setCameraError('The QR code could not be read. Try again or enter the order code manually.')
+            cleanup()
+            return
+          }
+        }
+        animationFrame = requestAnimationFrame(scanFrame)
+      }
+      animationFrame = requestAnimationFrame(scanFrame)
+    } catch (err) {
+      console.error('Could not start QR camera:', err)
+      setCameraError('Camera access was blocked. Allow camera permission or enter the code manually.')
     }
   }
 
@@ -280,6 +399,7 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   const handleConfirmDeliveryWithSignature = async () => {
     if (!scannedOrder) return
     setDeliveryConfirming(true)
+    setDeliveryError('')
 
     try {
       await confirmOrderDelivery(scannedOrder.id, deliverySignature || 'Confirmed by owner/rider', 'Store Owner')
@@ -290,14 +410,21 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
       loadData()
     } catch (err) {
       console.error('Delivery confirmation error:', err)
-      alert('Failed to mark delivery. Try again.')
+      setDeliveryError('Delivery confirmation could not be saved. Please try again.')
     } finally {
       setDeliveryConfirming(false)
     }
   }
 
-  const filteredOrders =
-    orderFilter === 'ALL' ? orders : orders.filter((o) => o.status === orderFilter)
+  const filteredOrders = orders.filter((order) => {
+    const matchesStatus = orderFilter === 'ALL' || order.status === orderFilter
+    const term = orderSearch.trim().toLowerCase()
+    const matchesSearch =
+      !term ||
+      [order.id, order.customer_name, order.customer_phone, order.product_name]
+        .some((value) => value?.toLowerCase().includes(term))
+    return matchesStatus && matchesSearch
+  })
 
   return (
     <div className="min-h-screen bg-white px-4 py-8 sm:px-8 lg:px-12 text-slate-900">
@@ -421,9 +548,26 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
         )}
       </div>
 
+      {loadError && (
+        <div role="alert" className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <span>{loadError}</span>
+          <button onClick={loadData} className="font-semibold underline">Retry</button>
+        </div>
+      )}
+
       {/* ─── ORDERS TAB ─── */}
       {activeTab === 'orders' && (
         <div className="mt-6">
+          <label className="mb-4 flex max-w-xl items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-slate-400">
+            <Search size={16} />
+            <input
+              type="search"
+              value={orderSearch}
+              onChange={(event) => setOrderSearch(event.target.value)}
+              placeholder="Search order code, customer, phone, or product"
+              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+            />
+          </label>
           <div className="flex gap-2 pb-4 overflow-x-auto">
             {['ALL', 'PENDING', 'CONFIRMED', 'VENDOR_NOTIFIED', 'DISPATCHED', 'DELIVERED'].map(
               (st) => (
@@ -445,7 +589,9 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
           <div className="space-y-4 mt-2">
             {filteredOrders.length === 0 ? (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-                <p className="text-base text-slate-500">No orders found in this status.</p>
+                <p className="text-base text-slate-500">
+                  {loading ? 'Loading orders from Supabase…' : 'No matching orders. Try another status or search term.'}
+                </p>
               </div>
             ) : (
               filteredOrders.map((ord) => (
@@ -479,6 +625,9 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
                     <div className="text-right">
                       <p className="font-mono text-lg font-bold text-slate-900">
                         {formatNaira(ord.total_amount)}
+                      </p>
+                      <p className={`mt-1 text-xs font-bold ${ord.payment_status?.toUpperCase() === 'PAID' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                        {ord.payment_status?.toUpperCase() === 'PAID' ? '✓ PAID' : 'PAYMENT PENDING'}
                       </p>
                       <p className="font-mono text-xs text-emerald-700 font-bold">
                         Net Profit: +{formatNaira(ord.net_profit)}
@@ -557,6 +706,15 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
                   {/* Order Status Controller */}
                   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 mt-1">
                     <div className="flex items-center gap-2">
+                      {ord.payment_status?.toUpperCase() !== 'PAID' && (
+                        <button
+                          onClick={() => handleConfirmPayment(ord.id)}
+                          disabled={paymentUpdatingId === ord.id}
+                          className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-50"
+                        >
+                          {paymentUpdatingId === ord.id ? 'Saving…' : 'Confirm payment received'}
+                        </button>
+                      )}
                       <span className="text-xs font-medium text-slate-500">Update Status:</span>
                       <button
                         onClick={() => handleStatusChange(ord.id, 'VENDOR_NOTIFIED')}
@@ -731,6 +889,34 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
             </div>
           )}
 
+          <div className="space-y-3">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className={`max-h-72 w-full rounded-xl bg-slate-950 object-contain ${cameraActive ? '' : 'hidden'}`}
+            />
+            {!cameraActive ? (
+              <button
+                onClick={startQrCamera}
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
+              >
+                <Camera size={17} />
+                Open camera scanner
+              </button>
+            ) : (
+              <button
+                onClick={() => cameraCleanupRef.current?.()}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"
+              >
+                <CameraOff size={16} />
+                Stop camera
+              </button>
+            )}
+            {cameraError && <p role="alert" className="text-sm text-amber-800">{cameraError}</p>}
+          </div>
+
           {/* Lookup Input */}
           <div className="flex gap-2">
             <input
@@ -741,13 +927,18 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
               className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-900 focus:bg-white focus:border-emerald-600 focus:outline-none"
             />
             <button
-              onClick={handleLookupOrderForDelivery}
+              onClick={() => handleLookupOrderForDelivery()}
               className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 text-xs font-bold text-white hover:bg-emerald-700 transition-colors"
             >
               <Search size={15} />
               Find Order
             </button>
           </div>
+          {deliveryError && (
+            <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              {deliveryError}
+            </p>
+          )}
 
           {/* Order Details & Digital Signature */}
           {scannedOrder && (

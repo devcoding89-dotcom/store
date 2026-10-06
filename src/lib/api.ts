@@ -131,13 +131,13 @@ export async function paystackCheckout(orderData: {
   return await res.json()
 }
 
-export async function markOrderPaid(orderId: string, paymentReference: string) {
-  const res = await fetch(`${API_BASE}/orders/${orderId}/paid`, {
+export async function markOrderPaid(orderId: string, paymentReference?: string) {
+  const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(orderId)}/paid`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ payment_reference: paymentReference }),
+    body: JSON.stringify(paymentReference ? { payment_reference: paymentReference } : {}),
   })
-  if (!res.ok) throw new Error('Failed to mark order paid')
+  if (!res.ok) throw new Error('Failed to confirm payment')
   return await res.json()
 }
 

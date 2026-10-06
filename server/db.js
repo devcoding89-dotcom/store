@@ -254,20 +254,67 @@ class Database {
   }
 
   // Order methods
-  getOrders() {
-    return this.data.orders
+  mapSupabaseOrder(row) {
+    const item = Array.isArray(row.items) ? row.items[0] : row.items
+    const productId = row.product_id || item?.product_id || item?.id || ''
+    const product = this.getProductById(productId)
+    const totalAmount = Number(row.total_amount || 0)
+    const agreedPrice = Number(row.agreed_price || item?.price || totalAmount)
+    const deliveryFee = Number(row.delivery_fee ?? Math.max(totalAmount - agreedPrice, 0))
+    const status = String(row.status || 'pending').toUpperCase()
+    const addressFromNotes = String(row.notes || '').match(/Delivery Address:\s*(.+?)(?:\.\s*(?:Agreed Last Price|PAID via)|$)/i)?.[1]
+
+    return {
+      id: row.order_id,
+      customer_id: row.customer_id || '',
+      customer_name: row.customer_name || 'Customer',
+      customer_phone: row.customer_phone || row.whatsapp_number || '',
+      customer_email: row.customer_email || '',
+      delivery_address: row.delivery_address || addressFromNotes || '',
+      delivery_zone: row.delivery_zone || 'Zone 1 (Central / Commercial Core)',
+      product_id: productId,
+      product_name: item?.name || product?.name || 'Product',
+      agreed_price: agreedPrice,
+      delivery_fee: deliveryFee,
+      total_amount: totalAmount,
+      vendor_cost: Number(row.vendor_cost ?? product?.vendor_cost ?? 0),
+      net_profit: Number(row.net_profit ?? Math.max(agreedPrice - Number(row.vendor_cost ?? product?.vendor_cost ?? 0), 0)),
+      vendor_name: row.vendor_name || product?.vendor_name || 'Marketplace Seller',
+      vendor_phone: row.vendor_phone || product?.vendor_phone || '',
+      payment_status: String(row.payment_status || 'pending').toUpperCase(),
+      payment_reference: row.payment_reference || '',
+      delivery_signature: row.delivery_signature || '',
+      delivered_at: row.delivered_at || '',
+      delivered_by: row.delivered_by || '',
+      status: status === 'PROCESSING' ? 'CONFIRMED' : status,
+      created_at: row.created_at,
+    }
   }
 
-  getOrderById(id) {
-    return this.data.orders.find((o) => o.id === id)
+  async getOrders() {
+    const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
+    if (error) throw new Error(`Could not fetch orders from Supabase: ${error.message}`)
+    return (data || []).map((row) => this.mapSupabaseOrder(row))
   }
 
-  getOrdersByCustomer(customerId) {
-    return this.data.orders.filter((o) => o.customer_id === customerId)
+  async getOrderById(id) {
+    const { data, error } = await supabase.from('orders').select('*').eq('order_id', id).maybeSingle()
+    if (error) throw new Error(`Could not fetch order from Supabase: ${error.message}`)
+    return data ? this.mapSupabaseOrder(data) : null
   }
 
-  createOrder(orderData) {
-    const code = `ORD-${Math.floor(10000 + Math.random() * 89999)}`
+  async getOrdersByCustomer(customerId) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
+    if (error) throw new Error(`Could not fetch customer orders from Supabase: ${error.message}`)
+    return (data || []).map((row) => this.mapSupabaseOrder(row))
+  }
+
+  async createOrder(orderData) {
+    const code = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
     const product = this.getProductById(orderData.product_id)
     const vendorCost = product ? product.vendor_cost : 0
     const agreedPrice = Number(orderData.agreed_price || (product ? product.listing_price : 0))
@@ -297,67 +344,68 @@ class Database {
       created_at: new Date().toISOString(),
     }
 
-    this.data.orders.unshift(newOrder)
-    this.save()
-
-    // Sync to Supabase orders table
     const safeEmail =
       orderData.customer_email ||
       `${orderData.customer_name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'buyer'}@guest.townsquare.market`
     const trackingId = `TRK-${Math.floor(100000 + Math.random() * 899999)}`
 
-    supabase
+    const { data, error } = await supabase
       .from('orders')
       .insert({
         order_id: code,
         tracking_id: trackingId,
+        customer_id: newOrder.customer_id,
         customer_name: orderData.customer_name,
         customer_email: safeEmail,
         customer_phone: orderData.customer_phone,
         whatsapp_number: orderData.whatsapp_number || orderData.customer_phone,
+        product_id: newOrder.product_id,
         total_amount: agreedPrice + deliveryFee,
         status: newOrder.status.toLowerCase() === 'confirmed' ? 'processing' : (newOrder.status.toLowerCase() || 'pending'),
         payment_status: newOrder.payment_status.toLowerCase(),
+        payment_reference: newOrder.payment_reference,
+        delivery_fee: deliveryFee,
+        delivery_address: newOrder.delivery_address,
+        delivery_zone: newOrder.delivery_zone,
+        vendor_cost: vendorCost,
+        net_profit: newOrder.net_profit,
+        agreed_price: agreedPrice,
+        vendor_name: newOrder.vendor_name,
+        vendor_phone: newOrder.vendor_phone,
         items: [
           {
-            id: product ? product.id : orderData.product_id,
+            product_id: product ? product.id : orderData.product_id,
             name: product ? product.name : (orderData.product_name || 'Product'),
+            image: product?.image || '',
             price: agreedPrice,
             quantity: 1,
           },
         ],
         notes: `Delivery Address: ${orderData.delivery_address}. Agreed Last Price: ₦${agreedPrice}, Vendor Cost: ₦${vendorCost}, Net Profit: ₦${netProfit}`,
       })
-      .then(({ error }) => {
-        if (error) console.warn('Supabase order sync note:', error.message)
-        else console.log(`Order ${code} synced to live Supabase orders table!`)
-      })
-      .catch((err) => console.warn('Supabase order sync failed:', err.message))
+      .select('*')
+      .single()
 
-    return newOrder
+    if (error) throw new Error(`Could not save order to Supabase: ${error.message}`)
+    console.log(`Order ${code} saved to Supabase`)
+    return this.mapSupabaseOrder(data)
   }
 
-  markOrderPaid(id, paymentReference = '') {
-    const order = this.getOrderById(id)
+  async markOrderPaid(id, paymentReference = '') {
+    const order = await this.getOrderById(id)
     if (!order) return null
 
-    order.payment_status = 'PAID'
-    order.status = 'CONFIRMED'
-    order.payment_reference = paymentReference
-    this.save()
-
-    // Sync status update to Supabase
-    supabase
+    const { data, error } = await supabase
       .from('orders')
       .update({
-        status: 'processing',
         payment_status: 'paid',
-        notes: `PAID via Paystack (Ref: ${paymentReference}). Delivery: ${order.delivery_address}. Last Price: ₦${order.agreed_price}`,
+        ...(paymentReference ? { payment_reference: paymentReference } : {}),
       })
       .eq('order_id', id)
-      .then(({ error }) => {
-        if (error) console.warn('Could not update Supabase order paid status:', error.message)
-      })
+      .select('*')
+      .single()
+    if (error) throw new Error(`Could not update paid order in Supabase: ${error.message}`)
+    const updatedOrder = this.mapSupabaseOrder(data)
 
     // Construct WhatsApp message for owner
     const ownerPhone = this.data.settings.owner_phone || '2349138987295'
@@ -365,13 +413,13 @@ class Database {
     const whatsappMessage = 
 `🚨 *NEW PAID ORDER via Paystack!*
 
-📦 *Item Ordered:* ${order.product_name}
-💰 *Last Negotiated Price Paid:* ₦${order.agreed_price.toLocaleString()}
-🚚 *Delivery Fee:* ₦${order.delivery_fee.toLocaleString()} (Total: ₦${order.total_amount.toLocaleString()})
-👤 *Customer:* ${order.customer_name}
-📞 *Customer Phone:* ${order.customer_phone}
-📍 *Delivery Address:* ${order.delivery_address}
-🧾 *Order Code:* ${order.id}
+📦 *Item Ordered:* ${updatedOrder.product_name}
+💰 *Last Negotiated Price Paid:* ₦${updatedOrder.agreed_price.toLocaleString()}
+🚚 *Delivery Fee:* ₦${updatedOrder.delivery_fee.toLocaleString()} (Total: ₦${updatedOrder.total_amount.toLocaleString()})
+👤 *Customer:* ${updatedOrder.customer_name}
+📞 *Customer Phone:* ${updatedOrder.customer_phone}
+📍 *Delivery Address:* ${updatedOrder.delivery_address}
+🧾 *Order Code:* ${updatedOrder.id}
 💳 *Paystack Reference:* ${paymentReference || 'Completed'}
 
 Please package and dispatch this order!`
@@ -379,28 +427,26 @@ Please package and dispatch this order!`
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(whatsappMessage)}`
 
     return {
-      order,
+      order: updatedOrder,
       whatsappUrl,
       whatsappMessage,
       ownerPhone: cleanPhone,
     }
   }
 
-  updateOrderStatus(id, status) {
-    const order = this.data.orders.find((o) => o.id === id)
-    if (order) {
-      order.status = status
-      this.save()
-
-      supabase
-        .from('orders')
-        .update({ status: status.toLowerCase() })
-        .eq('order_id', id)
-        .then(() => {})
-
-      return order
-    }
-    return null
+  async updateOrderStatus(id, status) {
+    const normalizedStatus = String(status).toUpperCase()
+    const allowedStatuses = new Set(['PENDING', 'CONFIRMED', 'PAID', 'VENDOR_NOTIFIED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'])
+    if (!allowedStatuses.has(normalizedStatus)) throw new Error('Invalid order status')
+    const databaseStatus = normalizedStatus === 'CONFIRMED' ? 'processing' : normalizedStatus.toLowerCase()
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status: databaseStatus })
+      .eq('order_id', id)
+      .select('*')
+      .maybeSingle()
+    if (error) throw new Error(`Could not update order status in Supabase: ${error.message}`)
+    return data ? this.mapSupabaseOrder(data) : null
   }
 
   // Users
@@ -421,9 +467,9 @@ Please package and dispatch this order!`
   }
 
   // Stats
-  getStats() {
+  async getStats() {
     const products = this.getProducts()
-    const orders = this.getOrders()
+    const orders = await this.getOrders()
 
     const totalOrders = orders.length
     const totalRevenue = orders.reduce((sum, o) => sum + (o.total_amount || 0), 0)
@@ -431,10 +477,12 @@ Please package and dispatch this order!`
     const activeProducts = products.filter((p) => p.in_stock).length
 
     return {
-      totalOrders,
-      totalRevenue,
-      totalProfit,
-      activeProducts,
+      total_orders: totalOrders,
+      total_sales: totalRevenue,
+      total_net_profit: totalProfit,
+      pending_orders: orders.filter((order) => order.status === 'PENDING').length,
+      dispatched_orders: orders.filter((order) => order.status === 'DISPATCHED').length,
+      active_products: activeProducts,
     }
   }
 }

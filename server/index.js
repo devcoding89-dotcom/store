@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import { db } from './db.js'
 import { processChat } from './ai.js'
+import { supabase } from './supabase.js'
 
 dotenv.config()
 
@@ -96,77 +97,104 @@ app.delete('/api/admin/products/:id', async (req, res) => {
 // --- ORDERS API ---
 
 // Admin list of all orders with net profit calculation
-app.get('/api/admin/orders', (req, res) => {
-  res.json(db.getOrders())
+app.get('/api/admin/orders', async (req, res) => {
+  try {
+    res.json(await db.getOrders())
+  } catch (error) {
+    console.error('Failed to load admin orders:', error)
+    res.status(500).json({ error: 'Could not load orders from the order database.' })
+  }
 })
 
 // Customer's personal orders
-app.get('/api/orders/my', (req, res) => {
+app.get('/api/orders/my', async (req, res) => {
   const customerId = req.query.customer_id
   if (!customerId) return res.json([])
-  res.json(db.getOrdersByCustomer(customerId))
+  try {
+    res.json(await db.getOrdersByCustomer(customerId))
+  } catch (error) {
+    console.error('Failed to load customer orders:', error)
+    res.status(500).json({ error: 'Could not load customer orders.' })
+  }
 })
 
 // Public tracking lookup
-app.get('/api/orders/track/:code', (req, res) => {
-  const order = db.getOrderById(req.params.code.trim().toUpperCase())
-  if (!order) return res.status(404).json({ error: 'Order not found' })
-  res.json({
-    id: order.id,
-    customer_name: order.customer_name,
-    customer_phone: order.customer_phone,
-    product_name: order.product_name,
-    agreed_price: order.agreed_price,
-    delivery_fee: order.delivery_fee,
-    total_amount: order.total_amount,
-    delivery_address: order.delivery_address,
-    delivery_zone: order.delivery_zone,
-    payment_status: order.payment_status,
-    status: order.status,
-    delivery_signature: order.delivery_signature,
-    delivered_at: order.delivered_at,
-    delivered_by: order.delivered_by,
-    created_at: order.created_at,
-  })
+app.get('/api/orders/track/:code', async (req, res) => {
+  try {
+    const order = await db.getOrderById(req.params.code.trim().toUpperCase())
+    if (!order) return res.status(404).json({ error: 'Order not found' })
+    res.json({
+      id: order.id,
+      customer_name: order.customer_name,
+      customer_phone: order.customer_phone,
+      product_name: order.product_name,
+      agreed_price: order.agreed_price,
+      delivery_fee: order.delivery_fee,
+      total_amount: order.total_amount,
+      delivery_address: order.delivery_address,
+      delivery_zone: order.delivery_zone,
+      payment_status: order.payment_status,
+      status: order.status,
+      delivery_signature: order.delivery_signature,
+      delivered_at: order.delivered_at,
+      delivered_by: order.delivered_by,
+      created_at: order.created_at,
+    })
+  } catch (error) {
+    console.error('Failed to look up tracked order:', error)
+    res.status(500).json({ error: 'Order tracking is temporarily unavailable.' })
+  }
 })
 
 // QR Code Delivery Confirmation & Signature
-app.post('/api/orders/:id/deliver', (req, res) => {
+app.post('/api/orders/:id/deliver', async (req, res) => {
   const { signature, delivered_by } = req.body
-  const order = db.getOrderById(req.params.id.trim().toUpperCase())
-  if (!order) return res.status(404).json({ error: 'Order not found' })
-
-  order.status = 'DELIVERED'
-  order.payment_status = 'PAID'
-  order.delivered_at = new Date().toISOString()
-  if (signature) order.delivery_signature = signature
-  if (delivered_by) order.delivered_by = delivered_by
-
-  db.save()
-  res.json({ success: true, order })
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .update({
+        status: 'delivered',
+        delivery_signature: signature || '',
+        delivered_at: new Date().toISOString(),
+        delivered_by: delivered_by || '',
+      })
+      .eq('order_id', req.params.id.trim().toUpperCase())
+      .select('*')
+      .maybeSingle()
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Order not found' })
+    res.json({ success: true, order: db.mapSupabaseOrder(data) })
+  } catch (error) {
+    console.error('Failed to confirm delivery:', error)
+    res.status(500).json({ error: 'Could not save delivery confirmation.' })
+  }
 })
 
 // Create order (from checkout or AI chat)
-app.post('/api/orders', (req, res) => {
+app.post('/api/orders', async (req, res) => {
   const { customer_name, customer_phone, customer_email, delivery_address, product_id, agreed_price, delivery_fee, delivery_zone, customer_id } = req.body
 
   if (!customer_name || !customer_phone || !product_id) {
     return res.status(400).json({ error: 'Missing required order fields' })
   }
 
-  const order = db.createOrder({
-    customer_id,
-    customer_name,
-    customer_phone,
-    customer_email,
-    delivery_address: delivery_address || 'Central District Landmark',
-    delivery_zone,
-    product_id,
-    agreed_price,
-    delivery_fee,
-  })
-
-  res.status(201).json(order)
+  try {
+    const order = await db.createOrder({
+      customer_id,
+      customer_name,
+      customer_phone,
+      customer_email,
+      delivery_address: delivery_address || 'Central District Landmark',
+      delivery_zone,
+      product_id,
+      agreed_price,
+      delivery_fee,
+    })
+    res.status(201).json(order)
+  } catch (error) {
+    console.error('Failed to save new order:', error)
+    res.status(500).json({ error: 'Order could not be saved. Please try again.' })
+  }
 })
 
 // Direct Paystack checkout & order confirmation with WhatsApp notification
@@ -202,29 +230,31 @@ app.post('/api/orders/paystack-checkout', async (req, res) => {
     }
   }
 
-  const order = db.createOrder({
-    customer_name,
-    customer_phone,
-    customer_email,
-    delivery_address: delivery_address || 'Address provided during Paystack checkout',
-    product_id,
-    agreed_price: Number(agreed_price),
-    delivery_fee: Number(delivery_fee || 800),
-    payment_status: payment_reference ? 'PAID' : 'PENDING',
-    status: payment_reference ? 'CONFIRMED' : 'PENDING',
-    payment_reference,
-  })
+  try {
+    const order = await db.createOrder({
+      customer_name,
+      customer_phone,
+      customer_email,
+      delivery_address: delivery_address || 'Address provided during Paystack checkout',
+      product_id,
+      agreed_price: Number(agreed_price),
+      delivery_fee: Number(delivery_fee || 800),
+      payment_status: payment_reference ? 'PAID' : 'PENDING',
+      status: payment_reference ? 'CONFIRMED' : 'PENDING',
+      payment_reference,
+    })
 
-  let whatsappInfo = null
-  if (payment_reference) {
-    whatsappInfo = db.markOrderPaid(order.id, payment_reference)
+    const whatsappInfo = payment_reference ? await db.markOrderPaid(order.id, payment_reference) : null
+
+    res.status(201).json({
+      order,
+      isVerified,
+      ...(whatsappInfo || {}),
+    })
+  } catch (error) {
+    console.error('Failed to save checkout order:', error)
+    res.status(500).json({ error: 'Order could not be saved. Please try again.' })
   }
-
-  res.status(201).json({
-    order,
-    isVerified,
-    ...(whatsappInfo || {}),
-  })
 })
 
 // Verify Paystack transaction directly with Paystack API
@@ -259,19 +289,29 @@ app.get('/api/paystack/verify/:reference', async (req, res) => {
 })
 
 // Mark order as paid via Paystack & generate WhatsApp message for owner
-app.post('/api/orders/:id/paid', (req, res) => {
+app.post('/api/orders/:id/paid', async (req, res) => {
   const { payment_reference } = req.body
-  const result = db.markOrderPaid(req.params.id, payment_reference)
-  if (!result) return res.status(404).json({ error: 'Order not found' })
-  res.json(result)
+  try {
+    const result = await db.markOrderPaid(req.params.id, payment_reference)
+    if (!result) return res.status(404).json({ error: 'Order not found' })
+    res.json(result)
+  } catch (error) {
+    console.error('Failed to update paid order:', error)
+    res.status(500).json({ error: 'Could not update payment status.' })
+  }
 })
 
 // Admin update order status
-app.patch('/api/admin/orders/:id/status', (req, res) => {
+app.patch('/api/admin/orders/:id/status', async (req, res) => {
   const { status } = req.body
-  const updated = db.updateOrderStatus(req.params.id, status)
-  if (!updated) return res.status(404).json({ error: 'Order not found' })
-  res.json(updated)
+  try {
+    const updated = await db.updateOrderStatus(req.params.id, status)
+    if (!updated) return res.status(404).json({ error: 'Order not found' })
+    res.json(updated)
+  } catch (error) {
+    console.error('Failed to update order status:', error)
+    res.status(500).json({ error: 'Could not update order status.' })
+  }
 })
 
 
@@ -323,8 +363,13 @@ app.post('/api/auth/register', (req, res) => {
 })
 
 // --- STATS ---
-app.get('/api/admin/stats', (req, res) => {
-  res.json(db.getStats())
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    res.json(await db.getStats())
+  } catch (error) {
+    console.error('Failed to load admin stats:', error)
+    res.status(500).json({ error: 'Could not load admin stats.' })
+  }
 })
 
 if (!process.env.VERCEL) {

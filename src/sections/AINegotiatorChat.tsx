@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { type ReactNode, useState, useRef, useEffect } from 'react'
 import {
   Send,
   X,
@@ -16,6 +16,7 @@ import { createOrder, sendChatMessage } from '@/lib/api'
 import { formatNaira } from '@/lib/catalog'
 import { MARKETPLACE_CONFIG } from '@/lib/config'
 import { QRCodeDisplay } from '@/components/QRCodeDisplay'
+import { Link } from 'react-router'
 import type { Product, Order, CartItem, User as AppUser } from '@/types/marketplace'
 
 type Message = {
@@ -57,6 +58,27 @@ const QUICK_PROMPTS = [
 function getTimestamp() {
   const d = new Date()
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function renderMessageContent(content: string) {
+  const linkPattern = /\[([^\]]+)\]\((\/(?:faq|returns|terms|marketplace(?:#track)?))\)/g
+  const parts: ReactNode[] = []
+  let previousIndex = 0
+
+  for (const match of content.matchAll(linkPattern)) {
+    const [markdown, label, to] = match
+    const index = match.index ?? 0
+    if (index > previousIndex) parts.push(content.slice(previousIndex, index))
+    parts.push(
+      <Link key={`${to}-${index}`} to={to} className="font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-900">
+        {label}
+      </Link>,
+    )
+    previousIndex = index + markdown.length
+  }
+
+  if (previousIndex < content.length) parts.push(content.slice(previousIndex))
+  return parts
 }
 
 export function AINegotiatorChat({
@@ -439,7 +461,7 @@ export function AINegotiatorChat({
                       : 'bg-white text-slate-800 border border-slate-200 rounded-bl-xs'
                   }`}
                 >
-                  <p className="whitespace-pre-line font-normal">{m.content}</p>
+                  <p className="whitespace-pre-line font-normal">{renderMessageContent(m.content)}</p>
 
                   {/* Payment / Order Action Card */}
                   {m.payAction && !m.isOrderPlaced && (

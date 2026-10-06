@@ -22,7 +22,7 @@ function buildTimeline(order: Order): Step[] {
     minute: '2-digit',
   })
 
-  const isPaid = order.payment_status === 'PAID' || status !== 'PENDING'
+  const isPaid = order.payment_status?.toUpperCase() === 'PAID'
   const isVendorNotified = ['VENDOR_NOTIFIED', 'DISPATCHED', 'DELIVERED'].includes(status)
   const isDispatched = ['DISPATCHED', 'DELIVERED'].includes(status)
   const isDelivered = status === 'DELIVERED'
@@ -34,8 +34,8 @@ function buildTimeline(order: Order): Step[] {
       done: true,
     },
     {
-      label: 'Order Verified via WhatsApp',
-      time: isPaid ? 'Secured & Confirmed' : 'Awaiting dispatch confirmation',
+      label: 'Payment Received',
+      time: isPaid ? 'Payment confirmed by the store' : 'Payment has not been confirmed yet',
       done: isPaid,
       current: !isPaid,
     },
@@ -191,7 +191,7 @@ export function TrackOrder({ prefill }: { prefill: string }) {
                     {formatNaira(order.total_amount)}
                   </p>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                    {order.payment_status === 'PAID' ? '✓ Order Confirmed' : 'Payment on Delivery / Pending'}
+                    {order.payment_status?.toUpperCase() === 'PAID' ? '✓ Payment received' : 'Payment pending'}
                   </p>
                 </div>
                 <button

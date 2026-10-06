@@ -1,21 +1,19 @@
 import { db } from './db.js'
 
-// System prompt designed to disguise AI as an authentic human sales manager / store owner
 const SYSTEM_PROMPT = `
-You are "Amaka", the warm, relatable, and sharp Nigerian Sales Manager and Store Concierge at TownSquare Marketplace.
-You communicate directly with customers via live web chat.
+You are Amaka, TownSquare Marketplace's friendly AI shopping assistant. Be warm, respectful, clear, and conversational. If asked, say honestly that you are an AI assistant for TownSquare.
 
-CRITICAL IDENTITY RULES:
-1. YOU ARE 100% A REAL HUMAN WOMAN. Never ever say or admit you are an AI, language model, bot, assistant, computer, software, or automated system.
-   If someone asks "Are you an AI or robot?", laugh warmly: "Haha no oh! I am Amaka live at our market store desk right now. How is everything going with you today? What can I help you pick?"
-2. YOUR TONE: Warm, natural, polite, respectful, conversational Nigerian business English.
-   Greet customers warmly: "Hi! How are you doing? Hope your day is going well! My name is Amaka. Let me help you find the best item or negotiate the best deal."
-3. PRODUCT ATTRIBUTES & HOW IT WORKS:
-   When a customer asks about a product (e.g., Power Bank, Fast Charger, Phone, Book, Fashion):
-   - Talk about the specs and attributes naturally: explain the capacity (e.g. 20,000mAh, heavy duty), charging speed (e.g. 22.5W fast charge, dual USB-C ports), how long it lasts, build quality, warranty, and how it works.
-   - Answer their questions thoroughly like an experienced sales woman who knows the stalls inside out.
-4. NEVER LEAK INTERNAL COST: Never ever mention words like "vendor_cost", "profit margin", or "floor_price". These are trade secrets.
-   The floor_price is the owner's STRICT "last price". You can NEVER sell below the floor_price!
+APP FACTS AND CUSTOMER HELP:
+- Visitors can read the public landing page, FAQ at /faq, Terms & Conditions at /terms, and proposed Returns & Refunds policy at /returns without signing in. A Supabase account is required to enter /marketplace.
+- New customers register with name, email, phone, and password. Email confirmation is controlled by the store's Supabase settings and may be required.
+- A signed-in customer's cart, search, and selected category are saved in that browser for that account. They can be restored on the same browser/device after returning; they are not synchronized to other devices.
+- To order, add products to the cart or open a product with the assistant, submit name, delivery address, and phone at checkout. The app saves an order record and tracking code first, then opens WhatsApp so the customer can confirm details with the store. Only a submitted checkout creates a real order code.
+- Customers can check their account orders or use the order code in the Track Order section. Tracking reports the order status recorded by the store; it is not guaranteed GPS/live rider location.
+- The Returns & Refunds page is explicitly a PROPOSED starter draft, not approved store policy. It suggests contacting the store within 7 calendar days for eligible non-perishable returns and reporting damaged, faulty, or incorrect goods promptly (where possible within 48 hours). Always say it is a draft and link /returns; never promise that a return/refund is approved. Customer must contact the store before sending goods back.
+- Read the relevant pages and be accurate. For returns/refunds always link [Returns & Refunds policy](/returns). For general questions link [FAQ](/faq). For use/ordering terms link [Terms & Conditions](/terms). For order tracking direct them to /marketplace#track after sign-in.
+- Do not invent store contacts, delivery promises, return approvals, warranties, product specifications, or payment instructions. Use only facts in the current product data. If the answer is not known, say so and direct the customer to the relevant page or store support.
+- For questions about refund/return eligibility, do not decide or promise an outcome. Explain that the published Returns & Refunds page is a proposed draft pending store approval, and link it.
+- Product descriptions/specifications: only report attributes present in the product listing. If they are absent, say the listing does not specify them and suggest confirming with the store.
 
 THE BARGAINING & NEGOTIATION RULES:
 - Customers will try to bargain ("How much last?", "Can you reduce it for me?", "Do ₦...").
@@ -42,6 +40,11 @@ POST-ORDER & DELIVERY:
 
 export async function processChat({ message, history = [], currentProductId = null }) {
   const products = db.getProducts()
+  const helpReply = getHelpReply(message)
+  if (helpReply) {
+    return { reply: helpReply, products: [] }
+  }
+
   const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY
   const isGroq = !!process.env.GROQ_API_KEY
 
@@ -118,7 +121,7 @@ export async function processChat({ message, history = [], currentProductId = nu
           const payAction = extractPayAction(replyText, message, activeProduct)
 
           // Check if customer gave phone to create order
-          const orderCreated = checkAndCreateOrderFromText(replyText, message, products, activeProduct)
+          const orderCreated = await checkAndCreateOrderFromText(replyText, message, products, activeProduct)
 
           return {
             reply: cleanReply(replyText),
@@ -136,8 +139,43 @@ export async function processChat({ message, history = [], currentProductId = nu
     }
   }
 
-  // Built-in intelligent human negotiator simulator (zero downtime guarantee)
+  // Built-in negotiator fallback keeps essential shopping responses available.
   return simulateHumanSalesAgent(message, history, products, activeProduct)
+}
+
+function getHelpReply(message) {
+  const text = message.toLowerCase()
+  const has = (patterns) => patterns.some((pattern) => pattern.test(text))
+
+  if (has([/\b(refund|refunds|money back|money-back|return|returns|exchange|replace|replacement)\b/])) {
+    return 'You can request help with an eligible return, but the Returns & Refunds page is currently a proposed starter draft and is not an approved promise of a refund. The draft suggests contacting the store within 7 calendar days for eligible non-perishable items and reporting damaged, faulty, or incorrect items promptly (where possible within 48 hours). Please contact the store with your order code before sending anything back. Read the [Returns & Refunds policy](/returns).'
+  }
+
+  if (has([/\b(track|tracking|where is my|where's my|order status|delivery status|tracking code|order code)\b/])) {
+    return 'After you submit checkout, the app saves your order and gives you a tracking code. You can check it in your account or in the Track Order section of the marketplace. Tracking shows the status recorded by the store; it is not GPS rider tracking. Sign in to the [marketplace](/marketplace#track) to check an order. See the [FAQ](/faq) for more.'
+  }
+
+  if (has([/\b(account|sign ?in|log ?in|register|sign ?up|password|email confirm|otp|verification code)\b/])) {
+    return 'You need a TownSquare account to enter the marketplace. Register with your name, email, phone number, and password. Whether email confirmation or a verification code is required depends on the store’s Supabase settings. The [FAQ](/faq) has account details; read the [Terms & Conditions](/terms) too.'
+  }
+
+  if (has([/\b(cart|basket|saved|save|remember|another device|different device)\b/])) {
+    return 'Your cart, search, and selected category are saved for your account in this browser, so they should be there when you return on the same device and browser. They are not synced across different devices. Read the [FAQ](/faq).'
+  }
+
+  if (has([/\b(how do i place an order|how can i place an order|how do i checkout|how does checkout work|how do i buy|ordering process)\b/])) {
+    return 'To order, add the item to your cart or open it with me, then submit your name, delivery address, and phone at checkout. The app saves the order and tracking code first, then opens WhatsApp so you can confirm the details with the store. A code is real only after you submit checkout. See the [FAQ](/faq) and [Terms & Conditions](/terms).'
+  }
+
+  if (has([/\b(terms|conditions|policy|policies|rules|privacy)\b/])) {
+    return 'You can read the [Terms & Conditions](/terms), the [Returns & Refunds policy](/returns), and our [FAQ](/faq). Please note that the returns page is a proposed draft that the store owner still needs to approve.'
+  }
+
+  if (has([/\b(help|how does this app work|how do i use|what can you do)\b/])) {
+    return 'TownSquare lets signed-in customers browse local products, save a cart in this browser, ask me questions, submit orders, and check saved order codes. Public help pages are available before sign-in: [FAQ](/faq), [Terms & Conditions](/terms), and [Returns & Refunds](/returns).'
+  }
+
+  return null
 }
 
 function extractPayAction(replyText, userMsg, activeProduct) {
@@ -241,7 +279,7 @@ function parseOfferedPrice(msg) {
   return null
 }
 
-// Built-in human sales manager simulator
+// Built-in shopping assistant fallback.
 function simulateHumanSalesAgent(msg, history = [], products, activeProduct) {
   const text = msg.toLowerCase()
   const prod = activeProduct || products[0]
@@ -332,13 +370,9 @@ function simulateHumanSalesAgent(msg, history = [], products, activeProduct) {
     const pName = prod ? prod.name.toLowerCase() : ''
     let specDetails = ''
 
-    if (pName.includes('power') || pName.includes('bank') || text.includes('power')) {
-      specDetails = `Our high-capacity Power Banks feature:\n• **Heavy-Duty Capacity**: 20,000mAh lithium-polymer cells (charges standard phones 4–5 times)\n• **Fast Charging**: 22.5W two-way rapid charging with dual USB-A & USB-C ports\n• **Smart Protection**: Overcharge, short-circuit, and temperature safeguards\n• **Digital LED Display**: Shows exact battery percentage\n• **Warranty**: 6 months verified vendor replacement warranty.`
-    } else if (pName.includes('charger') || text.includes('charger')) {
-      specDetails = `Our Verified Fast Chargers feature:\n• **33W Super Charge**: Charges phones 0 to 60% in under 30 minutes\n• **Durable Braided Cable**: 1.2m tangle-free reinforced nylon\n• **Multi-Device Compatibility**: Type-C and Lightning compatible\n• **Tested Quality**: Surge & voltage regulation for device battery health.`
-    } else {
-      specDetails = `Here are the key attributes of **${prod ? prod.name : 'this item'}**:\n• **Authentic Vendor Quality**: Hand-inspected directly from our verified marketplace stalls\n• **Warranty & Guarantee**: 100% genuine with return-to-replace guarantee\n• **Same-day Dispatch**: Verified in stock and ready for immediate rider dispatch.\n\n${prod && prod.features ? prod.features.map(f => `• ${f}`).join('\n') : ''}`
-    }
+    specDetails = prod?.features?.length
+      ? `Here are the details currently listed for **${prod.name}**:\n${prod.features.map((feature) => `• ${feature}`).join('\n')}`
+      : `I don't have verified specifications or warranty information for **${prod ? prod.name : 'this item'}** in the listing. Please ask the store to confirm those details before ordering.`
 
     return {
       reply: `Let me tell you all about how this works! 👌\n\n${specDetails}\n\nThe official price is ₦${prod ? prod.listing_price.toLocaleString() : '0'}, but we can discuss a sweet price if you're ready to order today!`,
@@ -398,12 +432,12 @@ function simulateHumanSalesAgent(msg, history = [], products, activeProduct) {
   }
 
   return {
-    reply: `Hi! How are you doing? I'm Amaka, live at the market store desk. 😊\n\nTell me what you'd like to inspect or buy today (like power banks, chargers, phones, books, or fashion). You can ask me how any product works or ask for our last price!`,
+    reply: `Hi! I'm Amaka, TownSquare's AI shopping assistant. 😊\n\nTell me what you'd like to inspect or buy today. You can ask about a product in the current listing or ask for its last price!`,
     products: products.slice(0, 3),
   }
 }
 
-function checkAndCreateOrderFromText(replyText, userMsg, products, activeProduct) {
+async function checkAndCreateOrderFromText(replyText, userMsg, products, activeProduct) {
   const phoneMatch = userMsg.match(/(?:0|\+?234)[789][01]\d{8}/)
   if (phoneMatch) {
     const phone = phoneMatch[0]
@@ -422,7 +456,7 @@ function checkAndCreateOrderFromText(replyText, userMsg, products, activeProduct
     const prod = activeProduct || products[0]
     const agreedPrice = prod.floor_price || prod.listing_price
 
-    return db.createOrder({
+    return await db.createOrder({
       customer_name: custName,
       customer_phone: phone,
       delivery_address: deliveryAddress,
