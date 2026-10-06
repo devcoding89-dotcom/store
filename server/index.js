@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import { db } from './db.js'
 import { processChat } from './ai.js'
 import { supabase } from './supabase.js'
+import { createAdminSessionToken, isValidAdminPassword, requireAdmin } from './adminAuth.js'
 
 dotenv.config()
 
@@ -13,6 +14,39 @@ const PORT = process.env.PORT || 3001
 app.use(cors())
 app.use(express.json({ limit: '25mb' }))
 app.use(express.urlencoded({ extended: true, limit: '25mb' }))
+
+const adminLoginAttempts = new Map()
+const ADMIN_LOGIN_WINDOW_MS = 15 * 60 * 1000
+const ADMIN_MAX_LOGIN_ATTEMPTS = 5
+
+app.post('/api/admin/login', (req, res) => {
+  const configuredPassword = process.env.ADMIN_PASSWORD
+  if (!configuredPassword) {
+    return res.status(503).json({ error: 'Admin sign-in is not configured on the server.' })
+  }
+
+  const now = Date.now()
+  const clientKey = req.ip || req.socket.remoteAddress || 'unknown'
+  const recentAttempts = (adminLoginAttempts.get(clientKey) || [])
+    .filter((attemptAt) => now - attemptAt < ADMIN_LOGIN_WINDOW_MS)
+
+  if (recentAttempts.length >= ADMIN_MAX_LOGIN_ATTEMPTS) {
+    adminLoginAttempts.set(clientKey, recentAttempts)
+    return res.status(429).json({ error: 'Too many sign-in attempts. Try again in 15 minutes.' })
+  }
+
+  const password = typeof req.body?.password === 'string' ? req.body.password : ''
+  if (!isValidAdminPassword(password)) {
+    recentAttempts.push(now)
+    adminLoginAttempts.set(clientKey, recentAttempts)
+    return res.status(401).json({ error: 'Incorrect admin password.' })
+  }
+
+  adminLoginAttempts.delete(clientKey)
+  return res.json({ token: createAdminSessionToken() })
+})
+
+app.use('/api/admin', requireAdmin)
 
 // --- PRODUCTS API ---
 
@@ -158,7 +192,7 @@ app.get('/api/orders/track/:code', async (req, res) => {
 })
 
 // QR Code Delivery Confirmation & Signature
-app.post('/api/orders/:id/deliver', async (req, res) => {
+app.post('/api/orders/:id/deliver', requireAdmin, async (req, res) => {
   const { signature, delivered_by } = req.body
   try {
     const { data, error } = await supabase
@@ -327,7 +361,7 @@ app.get('/api/paystack/verify/:reference', async (req, res) => {
 })
 
 // Mark order as paid via Paystack & generate WhatsApp message for owner
-app.post('/api/orders/:id/paid', async (req, res) => {
+app.post('/api/orders/:id/paid', requireAdmin, async (req, res) => {
   const { payment_reference } = req.body
   try {
     const result = await db.markOrderPaid(req.params.id, payment_reference)

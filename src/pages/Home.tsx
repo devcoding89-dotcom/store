@@ -11,7 +11,6 @@ import { TrackOrder } from '@/sections/TrackOrder'
 import { CartDrawer } from '@/sections/CartDrawer'
 import { AINegotiatorChat } from '@/sections/AINegotiatorChat'
 import { ProductDetailModal } from '@/sections/ProductDetailModal'
-import { AdminPortal } from '@/sections/AdminPortal'
 import { CustomerAccount } from '@/sections/CustomerAccount'
 import { Footer } from '@/sections/Footer'
 import { loadShoppingState, saveShoppingState } from '@/lib/shoppingState'
@@ -45,9 +44,6 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
 
   // ─── Product Detail Modal ───
   const [detailProduct, setDetailProduct] = useState<Product | null>(null)
-
-  // ─── Admin Portal ───
-  const [adminOpen, setAdminOpen] = useState(false)
 
   // ─── Customer Account ───
   const [accountOpen, setAccountOpen] = useState(false)
@@ -122,7 +118,6 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
         onSearch={search}
         onOpenCart={() => setCartOpen(true)}
         onOpenAccount={() => setAccountOpen(true)}
-        onOpenAdmin={() => setAdminOpen(true)}
       />
 
       <main>
@@ -185,22 +180,6 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
         onAddToCart={addToCart}
         onNegotiate={handleNegotiate}
       />
-
-      {/* Admin Portal - Full Screen Overlay */}
-      {adminOpen && (
-        <div className="fixed inset-0 z-[70] overflow-y-auto bg-white">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-slate-900 px-4 py-3 text-white shadow-sm">
-            <h2 className="font-display text-lg font-semibold">Admin Portal</h2>
-            <button
-              onClick={() => setAdminOpen(false)}
-              className="text-sm font-medium text-slate-300 hover:text-emerald-400 transition-colors"
-            >
-              ✕ Close Admin
-            </button>
-          </div>
-          <AdminPortal onBackToShop={() => setAdminOpen(false)} />
-        </div>
-      )}
 
       {/* Customer Account Overlay */}
       {accountOpen && (

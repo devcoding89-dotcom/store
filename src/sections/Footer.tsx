@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { ArrowRight, Mail, Instagram, Twitter } from 'lucide-react'
 import { Reveal } from '@/components/Reveal'
+import { HiddenAdminAccess } from '@/components/HiddenAdminAccess'
 import { MARKETPLACE_CONFIG } from '@/lib/config'
 
 export function Footer() {
@@ -79,7 +80,7 @@ export function Footer() {
         {(
           [
             ['Shop', ['Fashion & Tailoring', 'Aso-Oke & Textiles', 'Food & Provisions', 'Beauty & Skincare']],
-            ['Help', ['Track an order', 'FAQ', 'Returns & refunds', 'Terms & Conditions', 'Contact us']],
+            ['Help', ['Track an order', 'FAQ', 'Returns & replacements', 'Terms & Conditions', 'Contact us']],
             ['Sell', ['List your shop', 'Seller terms', 'Commission rates']],
           ] as const
         ).map(([heading, links]) => (
@@ -91,7 +92,7 @@ export function Footer() {
                   <a
                     href={
                       l === 'FAQ' ? '/faq'
-                        : l === 'Returns & refunds' ? '/returns'
+                        : l === 'Returns & replacements' ? '/returns'
                           : l === 'Terms & Conditions' || l === 'Seller terms' ? '/terms'
                             : heading === 'Sell' ? '#sell'
                               : heading === 'Shop' ? '#shop'
@@ -111,12 +112,15 @@ export function Footer() {
       {/* Meta strip */}
       <div className="border-t border-slate-800 px-4 py-5 sm:px-8 lg:px-10">
         <div className="mx-auto max-w-7xl flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 {MARKETPLACE_CONFIG.name} Marketplace · All Rights Reserved</p>
-          <p className="flex items-center gap-1.5">
-            Built for local businesses & shoppers
-            <span className="h-1 w-1 rounded-full bg-emerald-500" />
-            Orders via WhatsApp
-          </p>
+          <p>© {new Date().getFullYear()} {MARKETPLACE_CONFIG.name} Marketplace · All Rights Reserved</p>
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <p className="flex items-center gap-1.5">
+              Built for local businesses & shoppers
+              <span className="h-1 w-1 rounded-full bg-emerald-500" />
+              Orders via WhatsApp
+            </p>
+            <HiddenAdminAccess />
+          </div>
         </div>
       </div>
     </footer>

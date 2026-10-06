@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import type { Session } from '@supabase/supabase-js'
 import Landing from './pages/Landing'
 import Home from './pages/Home'
+import { AdminPage } from './pages/AdminPage'
 import { PublicInfo } from './pages/PublicInfo'
 import { supabase, toAppUser } from '@/lib/supabase'
 import type { User } from '@/types/marketplace'
@@ -47,6 +48,10 @@ export default function App() {
         element={currentUser
           ? <Home currentUser={currentUser} onUserChange={setCurrentUser} />
           : <Navigate to="/" replace />}
+      />
+      <Route
+        path="/admin"
+        element={<AdminPage />}
       />
       <Route path="/terms" element={<PublicInfo page="terms" />} />
       <Route path="/returns" element={<PublicInfo page="returns" />} />

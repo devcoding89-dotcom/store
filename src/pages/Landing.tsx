@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowDown, ArrowRight, BadgeCheck, Check, CircleHelp, Menu, MessageCircle, PackageCheck, Search, ShieldCheck, ShoppingBag, Sparkles, X } from 'lucide-react'
 import { CustomerAccount } from '@/sections/CustomerAccount'
+import { HiddenAdminAccess } from '@/components/HiddenAdminAccess'
 import { CATEGORIES } from '@/lib/catalog'
 import type { User } from '@/types/marketplace'
 
@@ -65,6 +66,10 @@ const faqs = [
     question: 'How do I check an order?',
     answer: 'Sign in and open your account to see orders associated with your account. You can also use an order tracking code when one has been provided.',
   },
+  {
+    question: 'Can I get a refund or replacement?',
+    answer: 'TownSquare does not offer cash refunds under its policy. If an order arrives damaged or incorrect, report it within 48 hours after delivery. If it is not delivered, report it within 48 hours after the expected delivery date TownSquare gave you. Verified issues may qualify for a replacement of the same product, subject to availability. Change of mind does not qualify.',
+  },
 ]
 
 export default function Landing({ onLoginSuccess }: LandingProps) {
@@ -119,7 +124,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             <a href="#categories" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Categories</a>
             <a href="#how-it-works" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">How it works</a>
             <a href="#faq" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">FAQ</a>
-            <a href="/returns" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Returns & refunds</a>
+            <a href="/returns" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Returns & replacements</a>
             <a href="/terms" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Terms & conditions</a>
             <button onClick={() => openAuth(false)} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold">Sign in</button>
             <button onClick={() => openAuth(true)} className="mt-2 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white">Create your account</button>
@@ -320,7 +325,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               <h2 className="mt-2 font-display text-2xl font-extrabold tracking-tight">Want to read the details first?</h2>
             </div>
             <div className="flex flex-wrap gap-3">
-              <a href="/returns" className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-emerald-600 hover:text-emerald-800">Returns & refunds</a>
+              <a href="/returns" className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-emerald-600 hover:text-emerald-800">Returns & replacements</a>
               <a href="/terms" className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-emerald-600 hover:text-emerald-800">Terms & conditions</a>
               <a href="/faq" className="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-800 px-5 text-sm font-bold text-white transition hover:bg-emerald-950">All FAQs</a>
             </div>
@@ -351,6 +356,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             <button onClick={() => openAuth(false)} className="inline-flex items-center gap-1 font-bold text-emerald-800">
               Sign in <ArrowDown className="rotate-[-45deg]" size={14} />
             </button>
+            <HiddenAdminAccess />
           </div>
         </div>
       </footer>

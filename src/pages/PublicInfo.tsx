@@ -28,10 +28,11 @@ const termsSections = [
     ],
   },
   {
-    title: '4. Orders, payment, and delivery',
+    title: '4. Orders, payment, delivery, and replacements',
     paragraphs: [
       'An order request is subject to availability and TownSquare confirmation. TownSquare should confirm the final item, total amount, delivery destination, estimated delivery arrangement, and payment instructions with you.',
       'Delivery estimates are estimates, not guaranteed arrival times. You are responsible for providing a complete address and reachable phone number. The store should be contacted promptly if delivery details need to change.',
+      'For verified damaged, incorrect, or undelivered orders reported within the Returns & Replacements policy window, TownSquare provides a replacement of the same product. TownSquare does not provide cash refunds under this policy. This does not limit consumer rights that cannot legally be excluded.',
     ],
   },
   {
@@ -57,41 +58,22 @@ const termsSections = [
 
 const returnSections = [
   {
-    title: 'Requesting a return',
+    title: 'When a replacement may be requested',
     paragraphs: [
-      'Proposed starter rule: contact TownSquare within 7 calendar days after delivery to request a return for an eligible non-perishable item. Please include your order code, the reason for the request, and clear photos if the item is damaged, faulty, or different from its listing.',
-      'For an item that is damaged, faulty, or incorrect, contact us as soon as you notice the issue and, where possible, within 48 hours of delivery so we can investigate promptly.',
+      'TownSquare accepts replacement requests only for an order that was delivered damaged or faulty, contained an item different from the one ordered, or was not delivered by the expected delivery date TownSquare gave you. A change of mind, or a size or colour preference when the correct item was delivered, does not qualify.',
+      'Contact TownSquare within 48 hours after delivery for a damaged, faulty, or incorrect item. For an undelivered order, contact TownSquare within 48 hours after the expected delivery date. Include your order code, a description of the issue, and clear photos when relevant.',
     ],
   },
   {
-    title: 'Condition of returned items',
+    title: 'What happens after you contact us',
     paragraphs: [
-      'Proposed starter rule: items should be unused, unwashed, undamaged, and returned with their original packaging, labels, and included accessories. Some product types may have additional hygiene or safety restrictions.',
+      'TownSquare will review the order and the reported issue. Do not send an item back before TownSquare has reviewed your request and provided return or inspection instructions. Keep the item and its packaging until you hear from us.',
     ],
   },
   {
-    title: 'Food, personal-care, and perishable items',
+    title: 'Replacement only — no cash refunds',
     paragraphs: [
-      'Proposed starter rule: food, perishable goods, opened personal-care products, and other hygiene-sensitive items are not returnable for change of mind. If one arrives damaged, unsafe, expired, or materially different from what you ordered, contact us immediately with photos and your order code.',
-    ],
-  },
-  {
-    title: 'Refunds, replacements, and return delivery',
-    paragraphs: [
-      'After reviewing a request, the store may offer an eligible refund, replacement, exchange, or another agreed resolution. The store must confirm the outcome and any return instructions before you send an item back.',
-      'Proposed starter rule: the store covers reasonable return delivery costs when an item is confirmed faulty, damaged on arrival, or sent in error. For an approved change-of-mind return, the customer pays return delivery. The store should confirm any refund method and timing before approving the return.',
-    ],
-  },
-  {
-    title: 'Items that cannot be returned',
-    paragraphs: [
-      'A change of mind, a size or colour preference where the item matches the listing, or damage caused after delivery may not qualify. This policy does not limit rights you may have under applicable consumer-protection law.',
-    ],
-  },
-  {
-    title: 'Contact us before returning anything',
-    paragraphs: [
-      'Do not send an item back before the store has reviewed your request and provided return instructions. Include your order code in every message so we can find your order.',
+      'If TownSquare verifies that the request qualifies, the remedy is a replacement of the same product, subject to availability. TownSquare does not issue cash refunds under this policy. If the same product is unavailable, contact TownSquare to discuss the order. This policy does not limit consumer rights that cannot legally be excluded.',
     ],
   },
 ]
@@ -126,8 +108,12 @@ const faqItems = [
     answer: 'The current checkout flow uses WhatsApp for the customer and store to confirm order details. Your app creates the order record first so the order code can be looked up.',
   },
   {
-    question: 'How do I request a return or refund?',
-    answer: 'Read the proposed return policy on this site and contact the store with your order code before sending anything back. The policy is a draft and should be confirmed by the business before launch.',
+    question: 'Can I get a refund or replacement?',
+    answer: 'TownSquare does not issue cash refunds under its policy. For a damaged, faulty, or incorrect item, contact TownSquare within 48 hours after delivery. For an undelivered order, contact TownSquare within 48 hours after the expected delivery date TownSquare gave you. If the issue is verified, the remedy is a replacement of the same product, subject to availability. Include your order code and do not send an item back until you receive instructions. Consumer rights that cannot legally be excluded are not affected.',
+  },
+  {
+    question: 'Can I return an item because I changed my mind?',
+    answer: 'No. Returns or replacements are limited to verified damaged, faulty, incorrect, or undelivered orders reported within the policy window. Change of mind, size, or colour preference does not qualify when the correct item was delivered.',
   },
   {
     question: 'Who do I contact if something goes wrong?',
@@ -144,9 +130,9 @@ const pageDetails = {
     sections: termsSections,
   },
   returns: {
-    eyebrow: 'If an order is not right',
-    title: 'Returns & Refunds',
-    description: 'How to ask the store for help with an item or order.',
+    eyebrow: 'Our order issue policy',
+    title: 'Returns & Replacements',
+    description: 'Replacement rules for damaged, incorrect, or undelivered orders.',
     icon: RotateCcw,
     sections: returnSections,
   },
@@ -190,7 +176,7 @@ export function PublicInfo({ page }: { page: PublicInfoPage }) {
 
   const details = pageDetails[page]
   const Icon = details.icon
-  const isDraft = page === 'returns'
+  const isTerms = page === 'terms'
 
   return (
     <InfoLayout>
@@ -200,13 +186,13 @@ export function PublicInfo({ page }: { page: PublicInfoPage }) {
       <p className="mt-4 max-w-2xl leading-7 text-slate-600">{details.description}</p>
       <p className="mt-3 text-xs text-slate-500">Last updated: October 5, 2026</p>
 
-      <div className={`mt-8 flex gap-3 rounded-2xl border p-4 ${isDraft ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-blue-200 bg-blue-50 text-blue-950'}`}>
-        {isDraft ? <ShieldCheck className="mt-0.5 shrink-0" size={19} /> : <FileText className="mt-0.5 shrink-0" size={19} />}
+      <div className={`mt-8 flex gap-3 rounded-2xl border p-4 ${isTerms ? 'border-blue-200 bg-blue-50 text-blue-950' : 'border-emerald-200 bg-emerald-50 text-emerald-950'}`}>
+        {isTerms ? <FileText className="mt-0.5 shrink-0" size={19} /> : <ShieldCheck className="mt-0.5 shrink-0" size={19} />}
         <p className="text-sm leading-6">
-          <strong>{isDraft ? 'Proposed starter policy — review before launch.' : 'Draft pending TownSquare approval before launch.'}</strong>{' '}
-          {isDraft
-            ? 'The return windows and cost rules below are suggested defaults, not confirmed business policy. Replace or approve them with your actual rules.'
-            : 'This general template is not legal advice. Add your verified business identity, contact details, applicable local requirements, and have the final text reviewed.'}
+          <strong>{isTerms ? 'Terms information.' : 'TownSquare policy: replacement only; no cash refunds.'}</strong>{' '}
+          {isTerms
+            ? 'This general template is not legal advice. Add your verified business identity, contact details, applicable local requirements, and have the final text reviewed.'
+            : 'Report damaged, faulty, or incorrect items within 48 hours after delivery; report non-delivery within 48 hours after the expected delivery date. Read the rules below; consumer rights that cannot legally be excluded are not affected.'}
         </p>
       </div>
 
@@ -246,7 +232,7 @@ function InfoLayout({ children }: { children: ReactNode }) {
         </article>
         <nav aria-label="Legal and help pages" className="flex flex-wrap gap-x-5 gap-y-2 px-2 py-6 text-sm font-semibold text-slate-600">
           <Link to="/faq" className="hover:text-emerald-800">FAQ</Link>
-          <Link to="/returns" className="hover:text-emerald-800">Returns & Refunds</Link>
+          <Link to="/returns" className="hover:text-emerald-800">Returns & Replacements</Link>
           <Link to="/terms" className="hover:text-emerald-800">Terms & Conditions</Link>
         </nav>
       </div>

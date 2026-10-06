@@ -1,5 +1,11 @@
 # React + TypeScript + Vite
 
+## Private admin access
+
+The admin entry is not linked from the storefront. After signing in to a customer account, open `/admin` and enter the server-side `ADMIN_PASSWORD`. Set this variable in the local server `.env` and in the production hosting environment. Use a long, unique password and never prefix it with `VITE_`; frontend-exposed variables are public.
+
+Admin API endpoints require a short-lived server-signed session token. Admin sessions expire after 8 hours, and repeated failed password attempts are rate-limited. The password is not stored in the browser or sent to the frontend bundle.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

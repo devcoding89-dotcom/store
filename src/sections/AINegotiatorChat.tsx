@@ -97,7 +97,7 @@ export function AINegotiatorChat({
       id: 'msg-welcome',
       role: 'assistant',
       content:
-        "Hi! How are you doing today? Hope everything is moving well with you! 😊\n\nMy name is Amaka, your personal shopping assistant here at TownSquare. Tell me what product you're looking for, or let's discuss any item you have in mind. How can I help you today?",
+        "Hi! I'm Amaka, TownSquare's shopping assistant. I can help with our products, prices, orders, accounts, payments, delivery, tracking, and store policies. I can’t help with unrelated topics, but I’ll do my best to give accurate TownSquare information.",
       time: getTimestamp(),
     },
   ])
@@ -214,15 +214,6 @@ export function AINegotiatorChat({
     setInput('')
     setIsTyping(true)
 
-    // Check if user is asking to pay right now
-    const lowerText = text.toLowerCase()
-    const isPaymentIntent =
-      lowerText.includes('pay') ||
-      lowerText.includes('checkout') ||
-      lowerText.includes('buy now') ||
-      lowerText.includes('order now') ||
-      lowerText.includes('i want to order')
-
     // Typing delay between 1.4s to 2.2s
     const typingDelay = Math.min(2200, Math.max(1400, text.length * 20))
 
@@ -239,19 +230,6 @@ export function AINegotiatorChat({
         new Promise((resolve) => setTimeout(resolve, typingDelay)),
       ])
 
-      // Fallback payAction if payment intent detected and none returned
-      let effectivePayAction = result.payAction || (result as Record<string, unknown>).paystackAction
-      if (!effectivePayAction && isPaymentIntent) {
-        const prod = activeProduct || (result.products && result.products[0]) || checkoutItems?.[0]?.product
-        if (prod) {
-          effectivePayAction = {
-            productId: prod.id,
-            productName: prod.name,
-            amount: prod.floor_price || prod.listing_price,
-          }
-        }
-      }
-
       const assistantMsg: Message = {
         id: `assistant-${Date.now()}`,
         role: 'assistant',
@@ -259,7 +237,7 @@ export function AINegotiatorChat({
         time: getTimestamp(),
         products: result.products,
         order: result.order,
-        payAction: effectivePayAction as Message['payAction'],
+        payAction: result.payAction,
       }
 
       setMessages((prev) => [...prev, assistantMsg])
@@ -600,7 +578,7 @@ export function AINegotiatorChat({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Amaka anything (e.g. I want to pay)..."
+              placeholder="Ask about TownSquare products, orders, or delivery..."
               disabled={isTyping}
               className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none transition-colors font-normal"
             />

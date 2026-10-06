@@ -376,7 +376,7 @@ export function CustomerAccount({
                     className="mt-1 h-4 w-4 shrink-0 accent-emerald-600"
                   />
                   <span>
-                    I agree to the <a href="/terms" target="_blank" rel="noreferrer" className="font-semibold text-emerald-700 underline">Terms & Conditions</a> and have read the <a href="/returns" target="_blank" rel="noreferrer" className="font-semibold text-emerald-700 underline">Returns & Refunds policy</a>.
+                    I agree to the <a href="/terms" target="_blank" rel="noreferrer" className="font-semibold text-emerald-700 underline">Terms & Conditions</a> and have read the <a href="/returns" target="_blank" rel="noreferrer" className="font-semibold text-emerald-700 underline">Returns & Replacements policy</a>.
                   </span>
                 </label>
               )}

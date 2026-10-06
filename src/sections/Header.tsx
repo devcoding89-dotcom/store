@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Menu, ShoppingBag, X, User, Settings, Search, ShieldCheck } from 'lucide-react'
+import { Menu, ShoppingBag, X, User, Search, ShieldCheck } from 'lucide-react'
 
 const NAV = [
   { label: 'All Products', href: '#shop' },
@@ -11,7 +11,6 @@ export function Header({
   cartCount,
   onOpenCart,
   onOpenAccount,
-  onOpenAdmin,
   storeName = 'TownSquare',
   searchQuery = '',
   onSearch,
@@ -19,7 +18,6 @@ export function Header({
   cartCount: number
   onOpenCart: () => void
   onOpenAccount?: () => void
-  onOpenAdmin?: () => void
   storeName?: string
   searchQuery?: string
   onSearch?: (q: string) => void
@@ -103,18 +101,6 @@ export function Header({
 
           {/* Action buttons */}
           <div className="flex items-center gap-2">
-            {/* Admin portal */}
-            {onOpenAdmin && (
-              <button
-                onClick={onOpenAdmin}
-                className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-emerald-700 transition-colors"
-                title="Admin Dashboard"
-              >
-                <Settings size={14} className="text-slate-500" />
-                <span>Admin</span>
-              </button>
-            )}
-
             {/* Account */}
             {onOpenAccount && (
               <button
@@ -215,17 +201,6 @@ export function Header({
                   className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold text-slate-700"
                 >
                   <User size={16} /> My Account
-                </button>
-              )}
-              {onOpenAdmin && (
-                <button
-                  onClick={() => {
-                    setOpen(false)
-                    onOpenAdmin()
-                  }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white shadow-sm"
-                >
-                  <Settings size={16} /> Admin Portal
                 </button>
               )}
             </div>

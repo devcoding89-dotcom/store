@@ -2,6 +2,42 @@ import type { Product, Order, User, AdminStats } from '@/types/marketplace'
 import { requireSupabase, toAppUser } from '@/lib/supabase'
 
 const API_BASE = '/api'
+const ADMIN_TOKEN_KEY = 'townsquare_admin_session'
+
+export function getAdminSessionToken(): string | null {
+  return window.sessionStorage.getItem(ADMIN_TOKEN_KEY)
+}
+
+export function clearAdminSession(): void {
+  window.sessionStorage.removeItem(ADMIN_TOKEN_KEY)
+}
+
+export async function loginAdmin(password: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/admin/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  })
+  if (!res.ok) throw new Error(await getApiError(res, 'Admin sign-in failed.'))
+  const data = await res.json() as { token?: string }
+  if (!data.token) throw new Error('Admin sign-in did not return a session.')
+  window.sessionStorage.setItem(ADMIN_TOKEN_KEY, data.token)
+}
+
+async function adminFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const token = getAdminSessionToken()
+  if (!token) throw new Error('Admin sign-in required.')
+
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers })
+  if (res.status === 401) {
+    clearAdminSession()
+    window.location.assign('/admin')
+    throw new Error('Admin session expired. Sign in again.')
+  }
+  return res
+}
 
 async function getApiError(res: Response, fallback: string) {
   const body = await res.json().catch(() => null) as { error?: string } | null
@@ -23,13 +59,13 @@ export async function fetchProducts(category?: string, search?: string): Promise
 }
 
 export async function fetchAdminProducts(): Promise<Product[]> {
-  const res = await fetch(`${API_BASE}/admin/products`)
+  const res = await adminFetch('/admin/products')
   if (!res.ok) throw new Error('Failed to fetch admin products')
   return await res.json()
 }
 
 export async function createAdminProduct(productData: Partial<Product>): Promise<Product> {
-  const res = await fetch(`${API_BASE}/admin/products`, {
+  const res = await adminFetch('/admin/products', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(productData),
@@ -39,7 +75,7 @@ export async function createAdminProduct(productData: Partial<Product>): Promise
 }
 
 export async function updateAdminProduct(id: string, productData: Partial<Product>): Promise<Product> {
-  const res = await fetch(`${API_BASE}/admin/products/${id}`, {
+  const res = await adminFetch(`/admin/products/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(productData),
@@ -49,14 +85,14 @@ export async function updateAdminProduct(id: string, productData: Partial<Produc
 }
 
 export async function deleteAdminProduct(id: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/admin/products/${id}`, {
+  const res = await adminFetch(`/admin/products/${id}`, {
     method: 'DELETE',
   })
   return res.ok
 }
 
 export async function confirmOrderDelivery(id: string, signature?: string, deliveredBy?: string): Promise<{ success: boolean; order: Order }> {
-  const res = await fetch(`${API_BASE}/orders/${id}/deliver`, {
+  const res = await adminFetch(`/orders/${id}/deliver`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ signature, delivered_by: deliveredBy }),
@@ -66,13 +102,13 @@ export async function confirmOrderDelivery(id: string, signature?: string, deliv
 }
 
 export async function fetchAdminOrders(): Promise<Order[]> {
-  const res = await fetch(`${API_BASE}/admin/orders`)
+  const res = await adminFetch('/admin/orders')
   if (!res.ok) throw new Error('Failed to fetch admin orders')
   return await res.json()
 }
 
 export async function updateOrderStatus(id: string, status: string): Promise<Order> {
-  const res = await fetch(`${API_BASE}/admin/orders/${id}/status`, {
+  const res = await adminFetch(`/admin/orders/${id}/status`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
@@ -82,7 +118,7 @@ export async function updateOrderStatus(id: string, status: string): Promise<Ord
 }
 
 export async function fetchAdminStats(): Promise<AdminStats> {
-  const res = await fetch(`${API_BASE}/admin/stats`)
+  const res = await adminFetch('/admin/stats')
   if (!res.ok) throw new Error('Failed to fetch admin stats')
   return await res.json()
 }
@@ -137,7 +173,7 @@ export async function paystackCheckout(orderData: {
 }
 
 export async function markOrderPaid(orderId: string, paymentReference?: string) {
-  const res = await fetch(`${API_BASE}/orders/${encodeURIComponent(orderId)}/paid`, {
+  const res = await adminFetch(`/orders/${encodeURIComponent(orderId)}/paid`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(paymentReference ? { payment_reference: paymentReference } : {}),
