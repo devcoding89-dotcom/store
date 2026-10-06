@@ -5,6 +5,7 @@ const NAV = [
   { label: 'All Products', href: '#shop' },
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Track Order', href: '#track' },
+  { label: 'Order', href: '#shop' },
 ]
 
 export function Header({
@@ -90,7 +91,7 @@ export function Header({
           <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-600">
             {NAV.map((item) => (
               <a
-                key={item.href}
+                key={item.label}
                 href={item.href}
                 className="navlink hover:text-emerald-600 transition-colors"
               >
@@ -180,7 +181,7 @@ export function Header({
               <div className="mt-6 flex flex-col gap-3">
                 {NAV.map((item) => (
                   <a
-                    key={item.href}
+                    key={item.label}
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className="rounded-lg px-3 py-2.5 text-base font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"

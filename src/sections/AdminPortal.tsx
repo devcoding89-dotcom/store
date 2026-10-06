@@ -209,9 +209,14 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   }
 
   const handleDeleteProduct = async (id: string) => {
-    if (confirm('Are you sure you want to remove this product?')) {
+    if (!confirm('Are you sure you want to remove this product?')) return
+    setLoadError('')
+    try {
       await deleteAdminProduct(id)
-      loadData()
+      await loadData()
+    } catch (err) {
+      console.error('Failed to delete product:', err)
+      setLoadError(err instanceof Error ? err.message : 'The product could not be deleted. Please try again.')
     }
   }
 

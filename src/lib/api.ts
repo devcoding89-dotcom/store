@@ -88,6 +88,7 @@ export async function deleteAdminProduct(id: string): Promise<boolean> {
   const res = await adminFetch(`/admin/products/${id}`, {
     method: 'DELETE',
   })
+  if (!res.ok) throw new Error(await getApiError(res, 'Failed to delete product'))
   return res.ok
 }
 

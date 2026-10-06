@@ -240,17 +240,24 @@ class Database {
   }
 
   async deleteProduct(id) {
-    const before = this.data.products.length
-    this.data.products = this.data.products.filter((p) => p.id !== id)
-    this.save()
+    const productExistsLocally = this.data.products.some((product) => product.id === id)
+    let deletedFromSupabase = false
 
-    try {
-      await supabase.from('products').delete().eq('id', id)
-    } catch (err) {
-      console.warn('Supabase delete error:', err.message)
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      const { data, error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id)
+        .select('id')
+      if (error) throw error
+      deletedFromSupabase = Boolean(data?.length)
     }
 
-    return this.data.products.length < before
+    if (!productExistsLocally && !deletedFromSupabase) return false
+
+    this.data.products = this.data.products.filter((product) => product.id !== id)
+    this.save()
+    return true
   }
 
   // Order methods

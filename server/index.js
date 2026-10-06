@@ -133,9 +133,14 @@ app.put('/api/admin/products/:id', (req, res) => {
 
 // Admin delete product
 app.delete('/api/admin/products/:id', async (req, res) => {
-  const ok = await db.deleteProduct(req.params.id)
-  if (!ok) return res.status(404).json({ error: 'Product not found' })
-  res.json({ success: true })
+  try {
+    const ok = await db.deleteProduct(req.params.id)
+    if (!ok) return res.status(404).json({ error: 'Product not found' })
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Failed to delete product:', error)
+    res.status(500).json({ error: 'Could not delete product from the database.' })
+  }
 })
 
 // --- ORDERS API ---
