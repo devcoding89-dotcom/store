@@ -3,6 +3,11 @@ import { requireSupabase, toAppUser } from '@/lib/supabase'
 
 const API_BASE = '/api'
 
+async function getApiError(res: Response, fallback: string) {
+  const body = await res.json().catch(() => null) as { error?: string } | null
+  return body?.error || fallback
+}
+
 export async function fetchProducts(category?: string, search?: string): Promise<Product[]> {
   try {
     const params = new URLSearchParams()
@@ -56,7 +61,7 @@ export async function confirmOrderDelivery(id: string, signature?: string, deliv
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ signature, delivered_by: deliveredBy }),
   })
-  if (!res.ok) throw new Error('Failed to confirm delivery')
+  if (!res.ok) throw new Error(await getApiError(res, 'Failed to confirm delivery'))
   return await res.json()
 }
 
@@ -72,7 +77,7 @@ export async function updateOrderStatus(id: string, status: string): Promise<Ord
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
   })
-  if (!res.ok) throw new Error('Failed to update order status')
+  if (!res.ok) throw new Error(await getApiError(res, 'Failed to update order status'))
   return await res.json()
 }
 

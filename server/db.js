@@ -255,13 +255,15 @@ class Database {
 
   // Order methods
   mapSupabaseOrder(row) {
-    const item = Array.isArray(row.items) ? row.items[0] : row.items
+    const orderItems = Array.isArray(row.items) ? row.items : row.items ? [row.items] : []
+    const item = orderItems[0]
     const productId = row.product_id || item?.product_id || item?.id || ''
     const product = this.getProductById(productId)
     const totalAmount = Number(row.total_amount || 0)
     const agreedPrice = Number(row.agreed_price || item?.price || totalAmount)
     const deliveryFee = Number(row.delivery_fee ?? Math.max(totalAmount - agreedPrice, 0))
-    const status = String(row.status || 'pending').toUpperCase()
+    const databaseStatus = String(row.status || 'pending').toUpperCase()
+    const fulfillmentStatus = String(row.fulfillment_status || '').toUpperCase()
     const addressFromNotes = String(row.notes || '').match(/Delivery Address:\s*(.+?)(?:\.\s*(?:Agreed Last Price|PAID via)|$)/i)?.[1]
 
     return {
@@ -273,7 +275,17 @@ class Database {
       delivery_address: row.delivery_address || addressFromNotes || '',
       delivery_zone: row.delivery_zone || 'Zone 1 (Central / Commercial Core)',
       product_id: productId,
-      product_name: item?.name || product?.name || 'Product',
+      product_name: orderItems.length
+        ? orderItems.map((line) => `${line.name || 'Product'}${Number(line.quantity || 1) > 1 ? ` × ${line.quantity}` : ''}`).join(', ')
+        : product?.name || 'Product',
+      items: orderItems.map((line) => ({
+        product_id: line.product_id || line.id || productId,
+        name: line.name || product?.name || 'Product',
+        image: line.image || product?.image || '',
+        price: Number(line.price || 0),
+        quantity: Number(line.quantity || 1),
+        ...(line.line_total !== undefined ? { line_total: Number(line.line_total) } : {}),
+      })),
       agreed_price: agreedPrice,
       delivery_fee: deliveryFee,
       total_amount: totalAmount,
@@ -283,10 +295,15 @@ class Database {
       vendor_phone: row.vendor_phone || product?.vendor_phone || '',
       payment_status: String(row.payment_status || 'pending').toUpperCase(),
       payment_reference: row.payment_reference || '',
+      payment_verified_at: row.payment_verified_at || '',
       delivery_signature: row.delivery_signature || '',
       delivered_at: row.delivered_at || '',
       delivered_by: row.delivered_by || '',
-      status: status === 'PROCESSING' ? 'CONFIRMED' : status,
+      status: fulfillmentStatus || (
+        databaseStatus === 'PROCESSING' ? 'CONFIRMED'
+        : databaseStatus === 'SHIPPED' ? 'DISPATCHED'
+        : databaseStatus
+      ),
       created_at: row.created_at,
     }
   }
@@ -315,11 +332,42 @@ class Database {
 
   async createOrder(orderData) {
     const code = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
-    const product = this.getProductById(orderData.product_id)
-    const vendorCost = product ? product.vendor_cost : 0
-    const agreedPrice = Number(orderData.agreed_price || (product ? product.listing_price : 0))
+    const requestedItems = Array.isArray(orderData.items) && orderData.items.length
+      ? orderData.items
+      : [{ product_id: orderData.product_id, quantity: 1 }]
+    const products = requestedItems.map(({ product_id, quantity }) => {
+      const product = this.getProductById(product_id)
+      const itemQuantity = Number(quantity)
+      if (!product || !Number.isInteger(itemQuantity) || itemQuantity < 1 || itemQuantity > 99) {
+        throw new Error('Order contains an invalid product or quantity')
+      }
+      return { product, quantity: itemQuantity }
+    })
+    const baseSubtotal = products.reduce((sum, item) => sum + item.product.listing_price * item.quantity, 0)
+    const agreedPrice = Number(orderData.agreed_price ?? baseSubtotal)
+    if (!Number.isFinite(agreedPrice) || agreedPrice <= 0) {
+      throw new Error('Order total must be a positive amount')
+    }
+    const vendorCost = products.reduce((sum, item) => sum + (item.product.vendor_cost || 0) * item.quantity, 0)
     const deliveryFee = Number(orderData.delivery_fee || 800)
     const netProfit = agreedPrice - vendorCost
+    let remainingAgreedPrice = agreedPrice
+    const orderItems = products.map(({ product, quantity }, index) => {
+      const baseLineTotal = product.listing_price * quantity
+      const lineTotal = index === products.length - 1
+        ? remainingAgreedPrice
+        : Math.round(agreedPrice * baseLineTotal / baseSubtotal)
+      remainingAgreedPrice -= lineTotal
+      return {
+        product_id: product.id,
+        name: product.name,
+        image: product.image || '',
+        price: lineTotal / quantity,
+        quantity,
+        line_total: lineTotal,
+      }
+    })
+    const primaryProduct = products[0].product
 
     const newOrder = {
       id: code,
@@ -329,15 +377,16 @@ class Database {
       customer_email: orderData.customer_email || '',
       delivery_address: orderData.delivery_address,
       delivery_zone: orderData.delivery_zone || 'Zone 1 (Central / Commercial Core)',
-      product_id: orderData.product_id,
-      product_name: orderData.product_name || (product ? product.name : 'Product'),
+      product_id: primaryProduct.id,
+      product_name: orderItems.map((item) => `${item.name}${item.quantity > 1 ? ` × ${item.quantity}` : ''}`).join(', '),
+      items: orderItems,
       agreed_price: agreedPrice,
       delivery_fee: deliveryFee,
       total_amount: agreedPrice + deliveryFee,
       vendor_cost: vendorCost,
       net_profit: netProfit > 0 ? netProfit : 0,
-      vendor_name: product ? product.vendor_name : 'Direct Gadget Hub',
-      vendor_phone: product ? product.vendor_phone : this.data.settings.owner_phone,
+      vendor_name: primaryProduct.vendor_name,
+      vendor_phone: primaryProduct.vendor_phone,
       payment_status: orderData.payment_status || 'PENDING',
       payment_reference: orderData.payment_reference || '',
       status: orderData.status || 'PENDING',
@@ -363,6 +412,7 @@ class Database {
         total_amount: agreedPrice + deliveryFee,
         status: newOrder.status.toLowerCase() === 'confirmed' ? 'processing' : (newOrder.status.toLowerCase() || 'pending'),
         payment_status: newOrder.payment_status.toLowerCase(),
+        fulfillment_status: 'pending',
         payment_reference: newOrder.payment_reference,
         delivery_fee: deliveryFee,
         delivery_address: newOrder.delivery_address,
@@ -372,15 +422,7 @@ class Database {
         agreed_price: agreedPrice,
         vendor_name: newOrder.vendor_name,
         vendor_phone: newOrder.vendor_phone,
-        items: [
-          {
-            product_id: product ? product.id : orderData.product_id,
-            name: product ? product.name : (orderData.product_name || 'Product'),
-            image: product?.image || '',
-            price: agreedPrice,
-            quantity: 1,
-          },
-        ],
+        items: orderItems,
         notes: `Delivery Address: ${orderData.delivery_address}. Agreed Last Price: ₦${agreedPrice}, Vendor Cost: ₦${vendorCost}, Net Profit: ₦${netProfit}`,
       })
       .select('*')
@@ -399,6 +441,7 @@ class Database {
       .from('orders')
       .update({
         payment_status: 'paid',
+        payment_verified_at: new Date().toISOString(),
         ...(paymentReference ? { payment_reference: paymentReference } : {}),
       })
       .eq('order_id', id)
@@ -436,12 +479,22 @@ Please package and dispatch this order!`
 
   async updateOrderStatus(id, status) {
     const normalizedStatus = String(status).toUpperCase()
-    const allowedStatuses = new Set(['PENDING', 'CONFIRMED', 'PAID', 'VENDOR_NOTIFIED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'])
+    const allowedStatuses = new Set(['PENDING', 'CONFIRMED', 'VENDOR_NOTIFIED', 'DISPATCHED', 'DELIVERED', 'CANCELLED'])
     if (!allowedStatuses.has(normalizedStatus)) throw new Error('Invalid order status')
-    const databaseStatus = normalizedStatus === 'CONFIRMED' ? 'processing' : normalizedStatus.toLowerCase()
+    const databaseStatus = {
+      PENDING: 'pending',
+      CONFIRMED: 'processing',
+      VENDOR_NOTIFIED: 'processing',
+      DISPATCHED: 'processing',
+      DELIVERED: 'delivered',
+      CANCELLED: 'cancelled',
+    }[normalizedStatus]
     const { data, error } = await supabase
       .from('orders')
-      .update({ status: databaseStatus })
+      .update({
+        status: databaseStatus,
+        fulfillment_status: normalizedStatus.toLowerCase(),
+      })
       .eq('order_id', id)
       .select('*')
       .maybeSingle()

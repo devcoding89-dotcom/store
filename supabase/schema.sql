@@ -31,14 +31,27 @@ ADD COLUMN IF NOT EXISTS vendor_cost NUMERIC,
 ADD COLUMN IF NOT EXISTS net_profit NUMERIC,
 ADD COLUMN IF NOT EXISTS agreed_price NUMERIC,
 ADD COLUMN IF NOT EXISTS customer_id TEXT,
+ADD COLUMN IF NOT EXISTS fulfillment_status TEXT NOT NULL DEFAULT 'pending',
 ADD COLUMN IF NOT EXISTS product_id TEXT,
 ADD COLUMN IF NOT EXISTS delivery_fee NUMERIC,
 ADD COLUMN IF NOT EXISTS payment_reference TEXT,
+ADD COLUMN IF NOT EXISTS payment_verified_at TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS vendor_name TEXT,
 ADD COLUMN IF NOT EXISTS vendor_phone TEXT,
 ADD COLUMN IF NOT EXISTS delivery_signature TEXT,
 ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS delivered_by TEXT;
+
+UPDATE orders
+SET fulfillment_status = CASE LOWER(status)
+  WHEN 'processing' THEN 'confirmed'
+  WHEN 'shipped' THEN 'dispatched'
+  WHEN 'delivered' THEN 'delivered'
+  WHEN 'cancelled' THEN 'cancelled'
+  ELSE 'pending'
+END
+WHERE fulfillment_status = 'pending'
+  AND LOWER(status) <> 'pending';
 
 -- 4. CREATE PROFILES TABLE (FOR CUSTOMER ACCOUNTS & AUTH)
 CREATE TABLE IF NOT EXISTS profiles (
@@ -50,6 +63,13 @@ CREATE TABLE IF NOT EXISTS profiles (
     role TEXT DEFAULT 'customer',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
+
+UPDATE orders AS orders
+SET customer_id = profiles.id::TEXT
+FROM profiles AS profiles
+WHERE orders.customer_id IS NULL
+  AND orders.customer_email IS NOT NULL
+  AND LOWER(orders.customer_email) = LOWER(profiles.email);
 
 -- Create a customer profile for each Supabase Auth account.
 CREATE OR REPLACE FUNCTION public.handle_new_user()

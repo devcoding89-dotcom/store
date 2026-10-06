@@ -113,6 +113,7 @@ export function AINegotiatorChat({
     productId: string
     productName: string
     amount: number
+    items?: CartItem[]
   } | null>(null)
   const [checkoutFormData, setCheckoutFormData] = useState({
     name: '',
@@ -285,7 +286,14 @@ export function AINegotiatorChat({
     productName: string
     amount: number
   }) => {
-    setCheckoutAction(action)
+    const cartItemsLabel = checkoutItems?.map((item) => `${item.product.name} (x${item.qty})`).join(', ')
+    const matchingCartItems = checkoutItems?.length && action.productName === cartItemsLabel
+      ? checkoutItems
+      : undefined
+    setCheckoutAction({
+      ...action,
+      ...(matchingCartItems ? { items: matchingCartItems } : {}),
+    })
     setFormError('')
     setShowCheckoutForm(true)
   }
@@ -331,6 +339,13 @@ export function AINegotiatorChat({
         customer_email: currentUser.email,
         delivery_address: address,
         product_id: productId,
+        items: checkoutAction?.items?.map(({ product, qty }) => ({
+          product_id: product.id,
+          name: product.name,
+          image: product.image,
+          price: product.listing_price,
+          quantity: qty,
+        })),
         product_name: itemName,
         agreed_price: amount,
         delivery_fee: 800,

@@ -17,6 +17,15 @@ export type Product = {
   badge?: string
 }
 
+export type OrderItem = {
+  product_id: string
+  name: string
+  image?: string
+  price: number
+  quantity: number
+  line_total?: number
+}
+
 export type Order = {
   id: string
   customer_id?: string
@@ -27,6 +36,7 @@ export type Order = {
   delivery_zone: string
   product_id: string
   product_name: string
+  items?: OrderItem[]
   agreed_price: number
   delivery_fee: number
   total_amount: number
@@ -36,6 +46,7 @@ export type Order = {
   vendor_phone: string
   payment_status?: string
   payment_reference?: string
+  payment_verified_at?: string
   delivery_signature?: string
   delivered_at?: string
   delivered_by?: string

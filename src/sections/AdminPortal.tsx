@@ -144,7 +144,11 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     try {
-      await updateOrderStatus(orderId, newStatus)
+      if (newStatus === 'DELIVERED') {
+        await confirmOrderDelivery(orderId, undefined, 'TownSquare delivery team')
+      } else {
+        await updateOrderStatus(orderId, newStatus)
+      }
       await loadData()
       return true
     } catch (err) {

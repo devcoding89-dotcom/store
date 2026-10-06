@@ -144,6 +144,7 @@ app.get('/api/orders/track/:code', async (req, res) => {
       delivery_address: order.delivery_address,
       delivery_zone: order.delivery_zone,
       payment_status: order.payment_status,
+      payment_verified_at: order.payment_verified_at,
       status: order.status,
       delivery_signature: order.delivery_signature,
       delivered_at: order.delivered_at,
@@ -164,6 +165,7 @@ app.post('/api/orders/:id/deliver', async (req, res) => {
       .from('orders')
       .update({
         status: 'delivered',
+        fulfillment_status: 'delivered',
         delivery_signature: signature || '',
         delivered_at: new Date().toISOString(),
         delivered_by: delivered_by || '',
@@ -176,15 +178,26 @@ app.post('/api/orders/:id/deliver', async (req, res) => {
     res.json({ success: true, order: db.mapSupabaseOrder(data) })
   } catch (error) {
     console.error('Failed to confirm delivery:', error)
-    res.status(500).json({ error: 'Could not save delivery confirmation.' })
+    res.status(500).json({ error: 'Could not save delivery confirmation. Check that the latest orders migration has been run in Supabase.' })
   }
 })
 
 // Create order (from checkout or AI chat)
 app.post('/api/orders', async (req, res) => {
-  const { customer_name, customer_phone, customer_email, delivery_address, product_id, agreed_price, delivery_fee, delivery_zone, customer_id } = req.body
+  const {
+    customer_name,
+    customer_phone,
+    customer_email,
+    delivery_address,
+    product_id,
+    items,
+    agreed_price,
+    delivery_fee,
+    delivery_zone,
+    customer_id,
+  } = req.body
 
-  if (!customer_name || !customer_phone || !product_id) {
+  if (!customer_name || !customer_phone || (!product_id && !Array.isArray(items))) {
     return res.status(400).json({ error: 'Missing required order fields' })
   }
 
@@ -197,6 +210,7 @@ app.post('/api/orders', async (req, res) => {
       delivery_address: delivery_address || 'Central District Landmark',
       delivery_zone,
       product_id,
+      items,
       agreed_price,
       delivery_fee,
     })
@@ -215,6 +229,7 @@ app.post('/api/orders/paystack-checkout', async (req, res) => {
     customer_email,
     delivery_address,
     product_id,
+    customer_id,
     agreed_price,
     delivery_fee,
     payment_reference,
@@ -232,7 +247,15 @@ app.post('/api/orders/paystack-checkout', async (req, res) => {
         headers: { Authorization: `Bearer ${secretKey}` },
       })
       const verifyData = await verifyRes.json()
-      if (verifyData.status && verifyData.data?.status === 'success') {
+      const expectedAmountKobo = Math.round(
+        (Number(agreed_price) + Number(delivery_fee || 800)) * 100
+      )
+      if (
+        verifyData.status &&
+        verifyData.data?.status === 'success' &&
+        verifyData.data.currency === 'NGN' &&
+        verifyData.data.amount === expectedAmountKobo
+      ) {
         isVerified = true
       }
     } catch (e) {
@@ -240,8 +263,13 @@ app.post('/api/orders/paystack-checkout', async (req, res) => {
     }
   }
 
+  if (payment_reference && !isVerified) {
+    return res.status(400).json({ error: 'Payment has not been verified. Please check the transaction and try again.' })
+  }
+
   try {
     const order = await db.createOrder({
+      customer_id,
       customer_name,
       customer_phone,
       customer_email,
@@ -249,12 +277,12 @@ app.post('/api/orders/paystack-checkout', async (req, res) => {
       product_id,
       agreed_price: Number(agreed_price),
       delivery_fee: Number(delivery_fee || 800),
-      payment_status: payment_reference ? 'PAID' : 'PENDING',
-      status: payment_reference ? 'CONFIRMED' : 'PENDING',
+      payment_status: isVerified ? 'PAID' : 'PENDING',
+      status: isVerified ? 'CONFIRMED' : 'PENDING',
       payment_reference,
     })
 
-    const whatsappInfo = payment_reference ? await db.markOrderPaid(order.id, payment_reference) : null
+    const whatsappInfo = isVerified ? await db.markOrderPaid(order.id, payment_reference) : null
 
     res.status(201).json({
       order,
@@ -320,7 +348,7 @@ app.patch('/api/admin/orders/:id/status', async (req, res) => {
     res.json(updated)
   } catch (error) {
     console.error('Failed to update order status:', error)
-    res.status(500).json({ error: 'Could not update order status.' })
+    res.status(500).json({ error: 'Could not update order status. Check that the latest orders migration has been run in Supabase.' })
   }
 })
 

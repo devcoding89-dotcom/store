@@ -161,6 +161,7 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
         onProceedToAI={(items) => {
           setCheckoutItems(items)
           setActiveProduct(items[0]?.product || null)
+          setCart([])
           setChatOpen(true)
         }}
       />

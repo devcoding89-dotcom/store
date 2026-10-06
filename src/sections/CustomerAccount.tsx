@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { User, Package, MapPin, Phone, LogOut, X } from 'lucide-react'
+import { User, Package, MapPin, Phone, LogOut, X, Receipt } from 'lucide-react'
 import { loginUser, logoutUser, registerUser } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { formatNaira } from '@/lib/catalog'
@@ -25,6 +25,7 @@ export function CustomerAccount({
   const [isRegister, setIsRegister] = useState(initialMode === 'register')
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
+  const [openReceiptId, setOpenReceiptId] = useState<string | null>(null)
 
   // Auth form state
   const [formData, setFormData] = useState({
@@ -173,7 +174,7 @@ export function CustomerAccount({
                   <Package size={24} className="mx-auto text-slate-400 mb-2" />
                   <p className="font-display text-base font-semibold text-slate-700">No orders yet</p>
                   <p className="text-xs text-slate-500 mt-1">
-                    Your orders placed with our sales manager or cart will show up here.
+                    Your orders and confirmed payment receipts stay saved here.
                   </p>
                 </div>
               ) : (
@@ -198,6 +199,54 @@ export function CustomerAccount({
                         </span>
                       </div>
                       <p className="font-display text-sm font-semibold mt-1">{ord.product_name}</p>
+                      <div className="mt-1 flex items-center justify-between">
+                        <span className={`font-semibold ${ord.payment_status?.toUpperCase() === 'PAID' ? 'text-emerald-700' : 'text-amber-700'}`}>
+                          {ord.payment_status?.toUpperCase() === 'PAID' ? 'Payment verified' : 'Payment pending'}
+                        </span>
+                        {ord.payment_status?.toUpperCase() === 'PAID' && (
+                          <button
+                            type="button"
+                            onClick={() => setOpenReceiptId((current) => current === ord.id ? null : ord.id)}
+                            className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-900"
+                            aria-expanded={openReceiptId === ord.id}
+                          >
+                            <Receipt size={14} />
+                            {openReceiptId === ord.id ? 'Hide receipt' : 'View receipt'}
+                          </button>
+                        )}
+                      </div>
+                      {openReceiptId === ord.id && ord.payment_status?.toUpperCase() === 'PAID' && (
+                        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
+                          <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+                            <span className="font-bold uppercase tracking-wide text-emerald-900">TownSquare payment receipt</span>
+                            <span className="text-[10px] font-semibold text-emerald-800">VERIFIED</span>
+                          </div>
+                          <div className="mt-2 space-y-1.5 text-slate-700">
+                            <p>Receipt / order code: <strong className="font-mono">{ord.payment_reference || ord.id}</strong></p>
+                            <p>Paid by: <strong>{ord.customer_name}</strong></p>
+                            <p>Verified: <strong>{ord.payment_verified_at ? new Date(ord.payment_verified_at).toLocaleString() : 'Confirmed by TownSquare'}</strong></p>
+                            <div className="border-t border-emerald-200 pt-2">
+                              {(ord.items?.length ? ord.items : [{
+                                product_id: ord.product_id,
+                                name: ord.product_name,
+                                price: ord.agreed_price,
+                                quantity: 1,
+                                line_total: ord.agreed_price,
+                              }]).map((item, index) => (
+                                <div key={`${item.product_id}-${index}`} className="flex justify-between gap-3 py-0.5">
+                                  <span>{item.name} × {item.quantity}</span>
+                                  <span>{formatNaira(item.line_total ?? item.price * item.quantity)}</span>
+                                </div>
+                              ))}
+                              <div className="mt-1 flex justify-between border-t border-emerald-200 pt-1.5 font-bold text-slate-900">
+                                <span>Total paid</span>
+                                <span>{formatNaira(ord.total_amount)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <p className="mt-2 text-[10px] text-emerald-900">This verified receipt remains in your account as your order record.</p>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-xs">
                         <span>Total: {formatNaira(ord.total_amount)}</span>
                         <button
