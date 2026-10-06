@@ -79,7 +79,7 @@ export function Footer() {
         {(
           [
             ['Shop', ['Fashion & Tailoring', 'Aso-Oke & Textiles', 'Food & Provisions', 'Beauty & Skincare']],
-            ['Help', ['Track an order', 'Returns & refunds', 'Report an order', 'Contact us']],
+            ['Help', ['Track an order', 'FAQ', 'Returns & refunds', 'Terms & Conditions', 'Contact us']],
             ['Sell', ['List your shop', 'Seller terms', 'Commission rates']],
           ] as const
         ).map(([heading, links]) => (
@@ -89,7 +89,14 @@ export function Footer() {
               {links.map((l) => (
                 <li key={l}>
                   <a
-                    href={heading === 'Sell' ? '#sell' : heading === 'Shop' ? '#shop' : '#track'}
+                    href={
+                      l === 'FAQ' ? '/faq'
+                        : l === 'Returns & refunds' ? '/returns'
+                          : l === 'Terms & Conditions' || l === 'Seller terms' ? '/terms'
+                            : heading === 'Sell' ? '#sell'
+                              : heading === 'Shop' ? '#shop'
+                                : '#track'
+                    }
                     className="text-sm text-slate-400 transition-colors hover:text-white"
                   >
                     {l}

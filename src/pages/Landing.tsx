@@ -94,6 +94,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           <a href="#categories" className="transition hover:text-emerald-700">Categories</a>
           <a href="#how-it-works" className="transition hover:text-emerald-700">How it works</a>
           <a href="#faq" className="transition hover:text-emerald-700">FAQ</a>
+          <a href="/returns" className="transition hover:text-emerald-700">Returns</a>
         </nav>
 
         <div className="hidden items-center gap-3 sm:flex">
@@ -118,6 +119,8 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             <a href="#categories" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Categories</a>
             <a href="#how-it-works" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">How it works</a>
             <a href="#faq" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">FAQ</a>
+            <a href="/returns" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Returns & refunds</a>
+            <a href="/terms" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Terms & conditions</a>
             <button onClick={() => openAuth(false)} className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold">Sign in</button>
             <button onClick={() => openAuth(true)} className="mt-2 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white">Create your account</button>
           </div>
@@ -292,6 +295,9 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               <button onClick={() => openAuth(true)} className="mt-6 inline-flex items-center gap-2 font-bold text-emerald-800 hover:text-emerald-950">
                 Create your account <ArrowRight size={16} />
               </button>
+              <a href="/faq" className="mt-3 flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-emerald-800">
+                Read all FAQs <ArrowRight size={15} />
+              </a>
             </div>
             <div className="divide-y divide-slate-200 border-y border-slate-200">
               {faqs.map(({ question, answer }) => (
@@ -303,6 +309,20 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                   <p className="mt-3 max-w-2xl pr-8 text-sm leading-6 text-slate-600">{answer}</p>
                 </details>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-t border-slate-200 bg-[#f1f5f1] px-5 py-12 sm:px-8 lg:px-12">
+          <div className="mx-auto flex max-w-7xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-700">Shopping with confidence</p>
+              <h2 className="mt-2 font-display text-2xl font-extrabold tracking-tight">Want to read the details first?</h2>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <a href="/returns" className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-emerald-600 hover:text-emerald-800">Returns & refunds</a>
+              <a href="/terms" className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-emerald-600 hover:text-emerald-800">Terms & conditions</a>
+              <a href="/faq" className="inline-flex min-h-11 items-center justify-center rounded-full bg-emerald-800 px-5 text-sm font-bold text-white transition hover:bg-emerald-950">All FAQs</a>
             </div>
           </div>
         </section>
@@ -324,9 +344,14 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
           <span>© {new Date().getFullYear()} TownSquare Marketplace</span>
-          <button onClick={() => openAuth(false)} className="inline-flex items-center gap-1 self-start font-bold text-emerald-800 sm:self-auto">
-            Sign in to your account <ArrowDown className="rotate-[-45deg]" size={14} />
-          </button>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <a href="/terms" className="font-semibold hover:text-emerald-800">Terms</a>
+            <a href="/returns" className="font-semibold hover:text-emerald-800">Returns</a>
+            <a href="/faq" className="font-semibold hover:text-emerald-800">FAQ</a>
+            <button onClick={() => openAuth(false)} className="inline-flex items-center gap-1 font-bold text-emerald-800">
+              Sign in <ArrowDown className="rotate-[-45deg]" size={14} />
+            </button>
+          </div>
         </div>
       </footer>
 

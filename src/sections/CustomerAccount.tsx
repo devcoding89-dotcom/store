@@ -34,6 +34,7 @@ export function CustomerAccount({
     address: '',
     password: '',
   })
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -314,6 +315,21 @@ export function CustomerAccount({
                     />
                   </div>
                 </>
+              )}
+
+              {isRegister && (
+                <label className="flex items-start gap-2.5 text-xs leading-5 text-slate-600">
+                  <input
+                    type="checkbox"
+                    required
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-1 h-4 w-4 shrink-0 accent-emerald-600"
+                  />
+                  <span>
+                    I agree to the <a href="/terms" target="_blank" rel="noreferrer" className="font-semibold text-emerald-700 underline">Terms & Conditions</a> and have read the <a href="/returns" target="_blank" rel="noreferrer" className="font-semibold text-emerald-700 underline">Returns & Refunds policy</a>.
+                  </span>
+                </label>
               )}
 
               <div>
