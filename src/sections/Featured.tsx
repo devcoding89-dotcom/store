@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
-import { X, Eye, ShoppingBag, CheckCircle2, MessageCircle } from 'lucide-react'
+import { X } from 'lucide-react'
 import { fetchProducts } from '@/lib/api'
-import { formatNaira } from '@/lib/catalog'
 import type { Product } from '@/types/marketplace'
+import { ProductCard } from '@/sections/ProductCard'
 
 type FeaturedProps = {
   query: string
@@ -11,7 +11,6 @@ type FeaturedProps = {
   onClearSearch: () => void
   onAdd: (p: Product) => void
   onViewDetail: (p: Product) => void
-  onNegotiate?: (p: Product) => void
 }
 
 export function Featured({
@@ -21,7 +20,6 @@ export function Featured({
   onClearSearch,
   onAdd,
   onViewDetail,
-  onNegotiate,
 }: FeaturedProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
@@ -127,109 +125,9 @@ export function Featured({
           </div>
         ) : (
           /* Product Grid */
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
             {products.map((p) => (
-              <article
-                key={p.id}
-                className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all duration-200"
-              >
-                {/* Image Section */}
-                <div
-                  className="relative aspect-square overflow-hidden bg-slate-100 cursor-pointer"
-                  onClick={() => onViewDetail(p)}
-                >
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-
-                  {/* Badge */}
-                  {p.badge && (
-                    <span className="absolute left-3 top-3 rounded-full bg-slate-900/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300 shadow-sm backdrop-blur-xs">
-                      {p.badge}
-                    </span>
-                  )}
-
-                  {/* In Stock Pill */}
-                  <span className="absolute right-3 top-3 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 shadow-xs">
-                    ● In Stock
-                  </span>
-
-                  {/* Hover Quick Actions */}
-                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onViewDetail(p)
-                      }}
-                      className="flex items-center gap-1 rounded-full bg-white px-3.5 py-2 text-xs font-bold text-slate-900 shadow-md hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
-                    >
-                      <Eye size={14} /> Quick View
-                    </button>
-                  </div>
-                </div>
-
-                {/* Card Body */}
-                <div className="flex flex-1 flex-col justify-between p-5">
-                  <div>
-                    <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
-                      <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                        {p.category}
-                      </span>
-                      <span className="truncate max-w-[130px] flex items-center gap-1">
-                        <CheckCircle2 size={12} className="text-emerald-600" />
-                        TownSquare
-                      </span>
-                    </div>
-
-                    <h3
-                      onClick={() => onViewDetail(p)}
-                      className="mt-2.5 font-display text-base font-bold text-slate-900 leading-snug line-clamp-2 cursor-pointer hover:text-emerald-700 transition-colors"
-                    >
-                      {p.name}
-                    </h3>
-
-                    {p.description && (
-                      <p className="mt-1.5 text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                        {p.description}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Price & Actions */}
-                  <div className="mt-5 pt-4 border-t border-slate-100">
-                    <div className="flex items-baseline justify-between mb-3.5">
-                      <span className="font-display text-xl font-bold text-slate-900">
-                        {formatNaira(p.listing_price)}
-                      </span>
-                      <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                        Listed Price
-                      </span>
-                    </div>
-
-                    <div className="flex gap-2">
-                      {onNegotiate && (
-                        <button
-                          onClick={() => onNegotiate(p)}
-                          className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-emerald-600 bg-emerald-50/70 py-2.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800 hover:bg-emerald-100 transition-colors active:scale-[0.98]"
-                        >
-                          <MessageCircle size={14} />
-                          Bargain
-                        </button>
-                      )}
-                      <button
-                        onClick={() => onAdd(p)}
-                        className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-[11px] font-bold uppercase tracking-wider text-white hover:bg-emerald-700 transition-colors shadow-xs active:scale-[0.98]"
-                      >
-                        <ShoppingBag size={14} />
-                        Add to Cart
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </article>
+              <ProductCard key={p.id} product={p} onView={onViewDetail} onAdd={onAdd} />
             ))}
           </div>
         )}

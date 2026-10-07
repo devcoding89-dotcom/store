@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router'
 import { MessageCircle } from 'lucide-react'
 import { Header } from '@/sections/Header'
 import { Hero } from '@/sections/Hero'
@@ -10,9 +11,10 @@ import { SellWithUs } from '@/sections/SellWithUs'
 import { TrackOrder } from '@/sections/TrackOrder'
 import { CartDrawer } from '@/sections/CartDrawer'
 import { AINegotiatorChat } from '@/sections/AINegotiatorChat'
-import { ProductDetailModal } from '@/sections/ProductDetailModal'
 import { CustomerAccount } from '@/sections/CustomerAccount'
 import { CustomerOrders } from '@/sections/CustomerOrders'
+import { ProductPage } from '@/sections/ProductPage'
+import { fetchProducts } from '@/lib/api'
 import { Footer } from '@/sections/Footer'
 import { loadShoppingState, saveShoppingState } from '@/lib/shoppingState'
 
@@ -27,8 +29,22 @@ function scrollToShop() {
   document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })
 }
 
+function getProductId(pathname: string) {
+  const match = pathname.match(/^\/marketplace\/products\/([^/]+)\/?$/)
+  if (!match) return null
+  try {
+    return decodeURIComponent(match[1])
+  } catch {
+    return null
+  }
+}
+
 export default function Home({ currentUser, onUserChange }: HomeProps) {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [savedShoppingState] = useState(() => loadShoppingState(currentUser.id))
+  const isProductPage = location.pathname.startsWith('/marketplace/products/')
+  const productId = getProductId(location.pathname)
 
   // ─── Search & Filter ───
   const [query, setQuery] = useState(savedShoppingState.query)
@@ -43,8 +59,11 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
   const [activeProduct, setActiveProduct] = useState<Product | null>(null)
   const [checkoutItems, setCheckoutItems] = useState<CartItem[] | null>(null)
 
-  // ─── Product Detail Modal ───
-  const [detailProduct, setDetailProduct] = useState<Product | null>(null)
+  // ─── Product detail page ───
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([])
+  const detailProduct = productId
+    ? catalogProducts.find((product) => product.id === productId) || null
+    : null
 
   // ─── Customer Account ───
   const [accountOpen, setAccountOpen] = useState(false)
@@ -56,6 +75,29 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
   useEffect(() => {
     saveShoppingState(currentUser.id, { cart, query, category })
   }, [currentUser.id, cart, query, category])
+
+  useEffect(() => {
+    const route = location.pathname.match(/^\/marketplace\/products\/([^/]+)\/?$/)
+    if (!route) return
+
+    let requestedProductId: string
+    try {
+      requestedProductId = decodeURIComponent(route[1])
+    } catch {
+      navigate('/marketplace', { replace: true })
+      return
+    }
+
+    let active = true
+    void fetchProducts().then((catalog) => {
+      if (!active) return
+      setCatalogProducts(catalog)
+      if (!catalog.some((product) => product.id === requestedProductId)) {
+        navigate('/marketplace', { replace: true })
+      }
+    })
+    return () => { active = false }
+  }, [location.pathname, navigate])
 
   // ─── Handlers ───
   const search = useCallback((q: string) => {
@@ -99,8 +141,15 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
   }, [])
 
   const handleViewDetail = useCallback((p: Product) => {
-    setDetailProduct(p)
-  }, [])
+    setCatalogProducts((current) => current.some((item) => item.id === p.id) ? current : [p, ...current])
+    navigate(`/marketplace/products/${encodeURIComponent(p.id)}`)
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [navigate])
+
+  const handleBackToProducts = useCallback(() => {
+    navigate('/marketplace')
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [navigate])
 
   const handleNegotiate = useCallback((p: Product) => {
     setActiveProduct(p)
@@ -124,24 +173,38 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
       />
 
       <main>
-        <Hero
-          onSearch={search}
-          onOpenConcierge={() => setChatOpen(true)}
-        />
-        <Marquee />
-        <Categories onPick={pickCategory} />
+        {isProductPage ? (
+          <ProductPage
+            key={productId || location.pathname}
+            product={detailProduct}
+            products={catalogProducts}
+            loading={!detailProduct}
+            onBack={handleBackToProducts}
+            onViewProduct={handleViewDetail}
+            onAddToCart={addToCart}
+            onNegotiate={handleNegotiate}
+          />
+        ) : (
+          <>
+            <Hero
+              onSearch={search}
+              onOpenConcierge={() => setChatOpen(true)}
+            />
+            <Marquee />
+            <Categories onPick={pickCategory} />
 
-        <Featured
-          query={query}
-          category={category}
-          onCategory={setCategory}
-          onClearSearch={() => setQuery('')}
-          onAdd={addToCart}
-          onViewDetail={handleViewDetail}
-          onNegotiate={handleNegotiate}
-        />
-        <HowItWorks />
-        <SellWithUs />
+            <Featured
+              query={query}
+              category={category}
+              onCategory={setCategory}
+              onClearSearch={() => setQuery('')}
+              onAdd={addToCart}
+              onViewDetail={handleViewDetail}
+            />
+            <HowItWorks />
+            <SellWithUs />
+          </>
+        )}
         <TrackOrder prefill={trackCode} />
       </main>
 
@@ -174,14 +237,6 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
         activeProduct={activeProduct}
         checkoutItems={checkoutItems}
         currentUser={currentUser}
-      />
-
-      {/* Product Detail Modal */}
-      <ProductDetailModal
-        product={detailProduct}
-        onClose={() => setDetailProduct(null)}
-        onAddToCart={addToCart}
-        onNegotiate={handleNegotiate}
       />
 
       {/* Customer Account Overlay */}

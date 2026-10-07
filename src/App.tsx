@@ -44,7 +44,7 @@ export default function App() {
           : <Landing onLoginSuccess={setCurrentUser} />}
       />
       <Route
-        path="/marketplace"
+        path="/marketplace/*"
         element={currentUser
           ? <Home currentUser={currentUser} onUserChange={setCurrentUser} />
           : <Navigate to="/" replace />}
