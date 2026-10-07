@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { fetchProducts } from '@/lib/api'
 import type { Product } from '@/types/marketplace'
 import { ProductCard } from '@/sections/ProductCard'
@@ -11,6 +11,7 @@ type FeaturedProps = {
   onClearSearch: () => void
   onAdd: (p: Product) => void
   onViewDetail: (p: Product) => void
+  onProductsLoaded: () => void
 }
 
 export function Featured({
@@ -20,10 +21,12 @@ export function Featured({
   onClearSearch,
   onAdd,
   onViewDetail,
+  onProductsLoaded,
 }: FeaturedProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const productSliderRef = useRef<HTMLDivElement>(null)
 
   // Fetch all products once for dynamic categories
   useEffect(() => {
@@ -42,9 +45,16 @@ export function Featured({
       )
       setProducts(data)
       setLoading(false)
+      onProductsLoaded()
     }
     load()
-  }, [category, query])
+  }, [category, query, onProductsLoaded])
+
+  const slideProducts = (direction: -1 | 1) => {
+    const slider = productSliderRef.current
+    if (!slider) return
+    slider.scrollBy({ left: direction * slider.clientWidth * 0.8, behavior: 'smooth' })
+  }
 
   // Dynamically compute category filters from authentic products
   const categoryFilters = useMemo(() => {
@@ -65,9 +75,31 @@ export function Featured({
               Explore Products & Start Bargaining
             </h2>
           </div>
-          <p className="text-sm font-medium text-slate-500">
-            {products.length} {products.length === 1 ? 'item' : 'items'} available for delivery
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm font-medium text-slate-500">
+              {products.length} {products.length === 1 ? 'item' : 'items'} available for delivery
+            </p>
+            {!loading && products.length > 1 && (
+              <div className="hidden gap-2 sm:flex">
+                <button
+                  type="button"
+                  onClick={() => slideProducts(-1)}
+                  aria-label="Slide products left"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => slideProducts(1)}
+                  aria-label="Slide products right"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Dynamic Category Filter Pills */}
@@ -125,10 +157,23 @@ export function Featured({
           </div>
         ) : (
           /* Product Grid */
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
-            {products.map((p) => (
-              <ProductCard key={p.id} product={p} onView={onViewDetail} onAdd={onAdd} />
-            ))}
+          <div className="relative mt-6 sm:mt-8">
+            <div
+              ref={productSliderRef}
+              className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-5"
+            >
+              {products.map((p) => (
+                <div
+                  key={p.id}
+                  className="w-[calc((100%-0.75rem)/2)] shrink-0 snap-start sm:w-[calc((100%-2.5rem)/3)] lg:w-[calc((100%-3.75rem)/4)] xl:w-[calc((100%-5rem)/5)]"
+                >
+                  <ProductCard product={p} onView={onViewDetail} onAdd={onAdd} />
+                </div>
+              ))}
+            </div>
+            <p className="mt-1 text-center text-xs font-medium text-slate-500 sm:hidden">
+              Swipe left or right to browse products
+            </p>
           </div>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { MessageCircle } from 'lucide-react'
 import { Header } from '@/sections/Header'
@@ -61,6 +61,8 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
 
   // ─── Product detail page ───
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([])
+  const savedProductListScroll = useRef(0)
+  const pendingScrollRestore = useRef<number | null>(null)
   const detailProduct = productId
     ? catalogProducts.find((product) => product.id === productId) || null
     : null
@@ -75,6 +77,13 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
   useEffect(() => {
     saveShoppingState(currentUser.id, { cart, query, category })
   }, [currentUser.id, cart, query, category])
+
+  useEffect(() => {
+    const state = location.state as { restoreProductListScroll?: number } | null
+    if (location.pathname === '/marketplace' && typeof state?.restoreProductListScroll === 'number') {
+      pendingScrollRestore.current = state.restoreProductListScroll
+    }
+  }, [location.pathname, location.state])
 
   useEffect(() => {
     const route = location.pathname.match(/^\/marketplace\/products\/([^/]+)\/?$/)
@@ -141,15 +150,24 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
   }, [])
 
   const handleViewDetail = useCallback((p: Product) => {
+    if (!isProductPage) savedProductListScroll.current = window.scrollY
     setCatalogProducts((current) => current.some((item) => item.id === p.id) ? current : [p, ...current])
     navigate(`/marketplace/products/${encodeURIComponent(p.id)}`)
     window.scrollTo({ top: 0, behavior: 'auto' })
-  }, [navigate])
+  }, [isProductPage, navigate])
 
   const handleBackToProducts = useCallback(() => {
-    navigate('/marketplace')
-    window.scrollTo({ top: 0, behavior: 'auto' })
+    navigate('/marketplace', {
+      state: { restoreProductListScroll: savedProductListScroll.current },
+    })
   }, [navigate])
+
+  const restoreProductListScroll = useCallback(() => {
+    const scrollY = pendingScrollRestore.current
+    if (scrollY === null) return
+    pendingScrollRestore.current = null
+    window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'auto' }))
+  }, [])
 
   const handleNegotiate = useCallback((p: Product) => {
     setActiveProduct(p)
@@ -200,6 +218,7 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
               onClearSearch={() => setQuery('')}
               onAdd={addToCart}
               onViewDetail={handleViewDetail}
+              onProductsLoaded={restoreProductListScroll}
             />
             <HowItWorks />
             <SellWithUs />
