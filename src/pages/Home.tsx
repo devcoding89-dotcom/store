@@ -12,6 +12,7 @@ import { CartDrawer } from '@/sections/CartDrawer'
 import { AINegotiatorChat } from '@/sections/AINegotiatorChat'
 import { ProductDetailModal } from '@/sections/ProductDetailModal'
 import { CustomerAccount } from '@/sections/CustomerAccount'
+import { CustomerOrders } from '@/sections/CustomerOrders'
 import { Footer } from '@/sections/Footer'
 import { loadShoppingState, saveShoppingState } from '@/lib/shoppingState'
 
@@ -47,6 +48,7 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
 
   // ─── Customer Account ───
   const [accountOpen, setAccountOpen] = useState(false)
+  const [ordersOpen, setOrdersOpen] = useState(false)
 
   // ─── Track Order ───
   const [trackCode, setTrackCode] = useState('')
@@ -118,6 +120,7 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
         onSearch={search}
         onOpenCart={() => setCartOpen(true)}
         onOpenAccount={() => setAccountOpen(true)}
+        onOpenOrders={() => setOrdersOpen(true)}
       />
 
       <main>
@@ -187,11 +190,14 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
           currentUser={currentUser}
           onLoginSuccess={onUserChange}
           onLogout={() => onUserChange(null)}
-          onTrackOrder={(code) => {
-            setAccountOpen(false)
-            handleTrackOrder(code)
-          }}
           onClose={() => setAccountOpen(false)}
+        />
+      )}
+      {ordersOpen && (
+        <CustomerOrders
+          currentUser={currentUser}
+          onTrackOrder={handleTrackOrder}
+          onClose={() => setOrdersOpen(false)}
         />
       )}
       {/* Floating Chat Trigger — quick access on mobile & desktop */}

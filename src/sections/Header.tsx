@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { Menu, ShoppingBag, X, User, Search, ShieldCheck } from 'lucide-react'
+import { Menu, ShoppingBag, X, User, Search, ShieldCheck, Package } from 'lucide-react'
 
 const NAV = [
   { label: 'All Products', href: '#shop' },
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Track Order', href: '#track' },
-  { label: 'Order', href: '#shop' },
 ]
 
 export function Header({
   cartCount,
   onOpenCart,
   onOpenAccount,
+  onOpenOrders,
   storeName = 'TownSquare',
   searchQuery = '',
   onSearch,
@@ -19,6 +19,7 @@ export function Header({
   cartCount: number
   onOpenCart: () => void
   onOpenAccount?: () => void
+  onOpenOrders?: () => void
   storeName?: string
   searchQuery?: string
   onSearch?: (q: string) => void
@@ -189,6 +190,18 @@ export function Header({
                     {item.label}
                   </a>
                 ))}
+                {onOpenOrders && (
+                  <button
+                    onClick={() => {
+                      setOpen(false)
+                      onOpenOrders()
+                    }}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-base font-semibold text-slate-700 transition-colors hover:bg-emerald-50 hover:text-emerald-700"
+                  >
+                    <Package size={17} />
+                    My Orders
+                  </button>
+                )}
               </div>
             </div>
 

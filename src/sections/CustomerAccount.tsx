@@ -1,15 +1,13 @@
-import { useState, useEffect, useCallback } from 'react'
-import { User, Package, MapPin, Phone, LogOut, X, Receipt } from 'lucide-react'
+import { useState } from 'react'
+import { User, MapPin, Phone, LogOut, X } from 'lucide-react'
 import { loginUser, logoutUser, registerUser } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
-import { formatNaira } from '@/lib/catalog'
-import type { User as UserType, Order } from '@/types/marketplace'
+import type { User as UserType } from '@/types/marketplace'
 
 type CustomerAccountProps = {
   currentUser: UserType | null
   onLoginSuccess: (user: UserType) => void
   onLogout: () => void
-  onTrackOrder: (code: string) => void
   onClose: () => void
   initialMode?: 'login' | 'register'
 }
@@ -18,14 +16,10 @@ export function CustomerAccount({
   currentUser,
   onLoginSuccess,
   onLogout,
-  onTrackOrder,
   onClose,
   initialMode = 'login',
 }: CustomerAccountProps) {
   const [isRegister, setIsRegister] = useState(initialMode === 'register')
-  const [orders, setOrders] = useState<Order[]>([])
-  const [loadingOrders, setLoadingOrders] = useState(false)
-  const [openReceiptId, setOpenReceiptId] = useState<string | null>(null)
 
   // Auth form state
   const [formData, setFormData] = useState({
@@ -39,28 +33,6 @@ export function CustomerAccount({
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [submitting, setSubmitting] = useState(false)
-
-  const loadMyOrders = useCallback(async () => {
-    if (!currentUser) return
-    setLoadingOrders(true)
-    try {
-      const res = await fetch(`/api/orders/my?customer_id=${encodeURIComponent(currentUser.id)}`)
-      if (res.ok) {
-        const data = await res.json()
-        setOrders(data)
-      }
-    } catch (err) {
-      console.error('Failed to load my orders:', err)
-    } finally {
-      setLoadingOrders(false)
-    }
-  }, [currentUser])
-
-  useEffect(() => {
-    if (currentUser) {
-      void loadMyOrders()
-    }
-  }, [currentUser, loadMyOrders])
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -112,7 +84,7 @@ export function CustomerAccount({
                 {currentUser ? `Welcome back, ${currentUser.name.split(' ')[0]}` : 'Customer Account'}
               </h2>
               <p className="text-xs text-slate-500">
-                {currentUser ? 'Personal Dashboard & Orders' : 'Sign in to track orders & save delivery details'}
+                {currentUser ? 'Personal account' : 'Sign in to save your account details'}
               </p>
             </div>
           </div>
@@ -153,117 +125,6 @@ export function CustomerAccount({
               </div>
             </div>
 
-            {/* My Orders Section */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-bold text-slate-900">
-                  My Orders ({orders.length})
-                </p>
-                <button
-                  onClick={loadMyOrders}
-                  className="text-xs text-emerald-600 hover:text-emerald-700 font-medium underline"
-                >
-                  Refresh
-                </button>
-              </div>
-
-              {loadingOrders ? (
-                <p className="font-mono text-xs text-ink/50 text-center py-4">Loading your orders...</p>
-              ) : orders.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
-                  <Package size={24} className="mx-auto text-slate-400 mb-2" />
-                  <p className="font-display text-base font-semibold text-slate-700">No orders yet</p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Your orders and confirmed payment receipts stay saved here.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {orders.map((ord) => (
-                    <div
-                      key={ord.id}
-                      className="rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm text-xs"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono font-bold text-slate-900">{ord.id}</span>
-                        <span
-                          className={`rounded px-2 py-0.5 font-mono text-[9px] font-bold uppercase ${
-                            ord.status === 'DELIVERED'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : ord.status === 'DISPATCHED'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}
-                        >
-                          {ord.status.replace('_', ' ')}
-                        </span>
-                      </div>
-                      <p className="font-display text-sm font-semibold mt-1">{ord.product_name}</p>
-                      <div className="mt-1 flex items-center justify-between">
-                        <span className={`font-semibold ${ord.payment_status?.toUpperCase() === 'PAID' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                          {ord.payment_status?.toUpperCase() === 'PAID' ? 'Payment verified' : 'Payment pending'}
-                        </span>
-                        {ord.payment_status?.toUpperCase() === 'PAID' && (
-                          <button
-                            type="button"
-                            onClick={() => setOpenReceiptId((current) => current === ord.id ? null : ord.id)}
-                            className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-900"
-                            aria-expanded={openReceiptId === ord.id}
-                          >
-                            <Receipt size={14} />
-                            {openReceiptId === ord.id ? 'Hide receipt' : 'View receipt'}
-                          </button>
-                        )}
-                      </div>
-                      {openReceiptId === ord.id && ord.payment_status?.toUpperCase() === 'PAID' && (
-                        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
-                          <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
-                            <span className="font-bold uppercase tracking-wide text-emerald-900">TownSquare payment receipt</span>
-                            <span className="text-[10px] font-semibold text-emerald-800">VERIFIED</span>
-                          </div>
-                          <div className="mt-2 space-y-1.5 text-slate-700">
-                            <p>Receipt / order code: <strong className="font-mono">{ord.payment_reference || ord.id}</strong></p>
-                            <p>Paid by: <strong>{ord.customer_name}</strong></p>
-                            <p>Verified: <strong>{ord.payment_verified_at ? new Date(ord.payment_verified_at).toLocaleString() : 'Confirmed by TownSquare'}</strong></p>
-                            <div className="border-t border-emerald-200 pt-2">
-                              {(ord.items?.length ? ord.items : [{
-                                product_id: ord.product_id,
-                                name: ord.product_name,
-                                price: ord.agreed_price,
-                                quantity: 1,
-                                line_total: ord.agreed_price,
-                              }]).map((item, index) => (
-                                <div key={`${item.product_id}-${index}`} className="flex justify-between gap-3 py-0.5">
-                                  <span>{item.name} × {item.quantity}</span>
-                                  <span>{formatNaira(item.line_total ?? item.price * item.quantity)}</span>
-                                </div>
-                              ))}
-                              <div className="mt-1 flex justify-between border-t border-emerald-200 pt-1.5 font-bold text-slate-900">
-                                <span>Total paid</span>
-                                <span>{formatNaira(ord.total_amount)}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <p className="mt-2 text-[10px] text-emerald-900">This verified receipt remains in your account as your order record.</p>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-xs">
-                        <span>Total: {formatNaira(ord.total_amount)}</span>
-                        <button
-                          onClick={() => {
-                            onClose()
-                            onTrackOrder(ord.id)
-                          }}
-                          className="font-semibold text-emerald-600 hover:text-emerald-700"
-                        >
-                          Track Live →
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         ) : (
           /* LOGIN / REGISTRATION FORM */

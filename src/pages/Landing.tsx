@@ -366,7 +366,6 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
           currentUser={null}
           onLoginSuccess={onLoginSuccess}
           onLogout={() => undefined}
-          onTrackOrder={() => undefined}
           onClose={() => setAuthOpen(false)}
           initialMode={isRegister ? 'register' : 'login'}
         />
