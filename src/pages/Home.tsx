@@ -62,6 +62,7 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
   // ─── Product detail page ───
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([])
   const savedProductListScroll = useRef(0)
+  const [savedProductListSection, setSavedProductListSection] = useState(0)
   const [savedProductListSlide, setSavedProductListSlide] = useState(0)
   const pendingScrollRestore = useRef<number | null>(null)
   const detailProduct = productId
@@ -153,9 +154,10 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
     setCart([])
   }, [])
 
-  const handleViewDetail = useCallback((p: Product, slideIndex?: number) => {
+  const handleViewDetail = useCallback((p: Product, sectionIndex = 0, slideIndex = 0) => {
     if (!isProductPage) {
       savedProductListScroll.current = window.scrollY
+      setSavedProductListSection(sectionIndex)
       setSavedProductListSlide(slideIndex ?? 0)
     }
     setCatalogProducts((current) => current.some((item) => item.id === p.id) ? current : [p, ...current])
@@ -168,10 +170,11 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
     navigate('/marketplace', {
       state: {
         restoreProductListScroll: savedProductListScroll.current,
+        restoreProductListSection: savedProductListSection,
         restoreProductListSlide: savedProductListSlide,
       },
     })
-  }, [navigate, savedProductListSlide])
+  }, [navigate, savedProductListSection, savedProductListSlide])
 
   const restoreProductListScroll = useCallback(() => {
     const scrollY = pendingScrollRestore.current
@@ -227,10 +230,10 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
             <Featured
               query={query}
               category={category}
-              initialSlide={savedProductListSlide}
+              initialSectionIndex={savedProductListSection}
+              initialSlideIndex={savedProductListSlide}
               onCategory={setCategory}
               onClearSearch={() => setQuery('')}
-              onAdd={addToCart}
               onViewDetail={handleViewDetail}
               onProductsLoaded={restoreProductListScroll}
             />

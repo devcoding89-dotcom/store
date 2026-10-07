@@ -9,10 +9,105 @@ type FeaturedProps = {
   category: string
   onCategory: (c: string) => void
   onClearSearch: () => void
-  onAdd: (p: Product) => void
-  onViewDetail: (p: Product, slideIndex: number) => void
+  onViewDetail: (p: Product, sectionIndex: number, slideIndex: number) => void
   onProductsLoaded: () => void
+  initialSectionIndex: number
+  initialSlideIndex: number
+}
+
+type ProductSection = {
+  type: 'normal' | 'carousel'
+  products: Product[]
+}
+
+type ProductCarouselProps = {
+  products: Product[]
   initialSlide: number
+  onViewDetail: (product: Product, slideIndex: number) => void
+}
+
+function ProductCarousel({ products, initialSlide, onViewDetail }: ProductCarouselProps) {
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const slides = useMemo(() => {
+    const result: Product[][] = []
+    for (let index = 0; index < products.length; index += 4) {
+      result.push(products.slice(index, index + 4))
+    }
+    return result
+  }, [products])
+  const [activeSlide, setActiveSlide] = useState(() => Math.min(initialSlide, slides.length - 1))
+
+  const moveSlide = (direction: -1 | 1) => {
+    setActiveSlide((slide) => Math.max(0, Math.min(slides.length - 1, slide + direction)))
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 sm:p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">Swipe to explore</p>
+        {slides.length > 1 && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => moveSlide(-1)}
+              disabled={activeSlide === 0}
+              aria-label="Show previous four products"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
+            >
+              <ChevronLeft size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={() => moveSlide(1)}
+              disabled={activeSlide === slides.length - 1}
+              aria-label="Show next four products"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
+            >
+              <ChevronRight size={17} />
+            </button>
+          </div>
+        )}
+      </div>
+      <div
+        className="flex touch-pan-y transition-transform duration-500 ease-out"
+        style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+        onTouchStart={(event) => {
+          const touch = event.touches[0]
+          touchStart.current = { x: touch.clientX, y: touch.clientY }
+        }}
+        onTouchEnd={(event) => {
+          const start = touchStart.current
+          const touch = event.changedTouches[0]
+          touchStart.current = null
+          if (!start || !touch) return
+          const deltaX = touch.clientX - start.x
+          const deltaY = touch.clientY - start.y
+          if (Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
+            moveSlide(deltaX < 0 ? 1 : -1)
+          }
+        }}
+      >
+        {slides.map((slide, slideIndex) => (
+          <div key={slide[0]?.id ?? slideIndex} className="w-full shrink-0">
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+              {slide.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onView={(selected) => onViewDetail(selected, slideIndex)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {slides.length > 1 && (
+        <p className="mt-3 text-center text-xs font-medium text-slate-500">
+          {activeSlide + 1} / {slides.length}
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function Featured({
@@ -20,17 +115,14 @@ export function Featured({
   category,
   onCategory,
   onClearSearch,
-  onAdd,
   onViewDetail,
   onProductsLoaded,
-  initialSlide,
+  initialSectionIndex,
+  initialSlideIndex,
 }: FeaturedProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeSlide, setActiveSlide] = useState(0)
-  const touchStart = useRef<{ x: number; y: number } | null>(null)
-  const initialSlideApplied = useRef(false)
 
   // Fetch all products once for dynamic categories
   useEffect(() => {
@@ -47,14 +139,11 @@ export function Featured({
         category !== 'All' ? category : undefined,
         query || undefined,
       )
-      const lastSlide = Math.max(0, Math.ceil(data.length / 4) - 1)
-      setActiveSlide(initialSlideApplied.current ? 0 : Math.min(initialSlide, lastSlide))
-      initialSlideApplied.current = true
       setProducts(data)
       setLoading(false)
     }
     load()
-  }, [category, initialSlide, query])
+  }, [category, query])
 
   useLayoutEffect(() => {
     if (!loading) onProductsLoaded()
@@ -65,12 +154,27 @@ export function Featured({
     const cats = Array.from(new Set(allProducts.map((p) => p.category))).filter(Boolean)
     return ['All', ...cats]
   }, [allProducts])
-  const productSlides = useMemo(() => {
-    const slides: Product[][] = []
-    for (let index = 0; index < products.length; index += 4) {
-      slides.push(products.slice(index, index + 4))
+  const productSections = useMemo(() => {
+    const pattern = [
+      { type: 'normal', count: 8 },
+      { type: 'carousel', count: 8 },
+      { type: 'normal', count: 4 },
+      { type: 'carousel', count: 8 },
+      { type: 'carousel', count: 8 },
+    ] as const
+    const sections: ProductSection[] = []
+    let productIndex = 0
+    let patternIndex = 0
+    while (productIndex < products.length) {
+      const section = pattern[patternIndex % pattern.length]
+      sections.push({
+        type: section.type,
+        products: products.slice(productIndex, productIndex + section.count),
+      })
+      productIndex += section.count
+      patternIndex += 1
     }
-    return slides
+    return sections
   }, [products])
 
   return (
@@ -90,28 +194,6 @@ export function Featured({
             <p className="text-sm font-medium text-slate-500">
               {products.length} {products.length === 1 ? 'item' : 'items'} available for delivery
             </p>
-            {!loading && productSlides.length > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveSlide((slide) => Math.max(0, slide - 1))}
-                  disabled={activeSlide === 0}
-                  aria-label="Show previous four products"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveSlide((slide) => Math.min(productSlides.length - 1, slide + 1))}
-                  disabled={activeSlide === productSlides.length - 1}
-                  aria-label="Show next four products"
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -170,51 +252,25 @@ export function Featured({
           </div>
         ) : (
           /* Product Grid */
-          <div className="mt-6 overflow-hidden sm:mt-8">
-            <div
-              className="flex touch-pan-y transition-transform duration-500 ease-out"
-              style={{ transform: `translateX(-${activeSlide * 100}%)` }}
-              aria-live="polite"
-              onTouchStart={(event) => {
-                const touch = event.touches[0]
-                touchStart.current = { x: touch.clientX, y: touch.clientY }
-              }}
-              onTouchEnd={(event) => {
-                const start = touchStart.current
-                const touch = event.changedTouches[0]
-                touchStart.current = null
-                if (!start || !touch) return
-
-                const deltaX = touch.clientX - start.x
-                const deltaY = touch.clientY - start.y
-                if (Math.abs(deltaX) < 45 || Math.abs(deltaX) <= Math.abs(deltaY)) return
-                setActiveSlide((slide) => Math.max(0, Math.min(productSlides.length - 1, slide + (deltaX < 0 ? 1 : -1))))
-              }}
-            >
-              {productSlides.map((slide, slideIndex) => (
-                <div
-                  key={slide[0]?.id ?? slideIndex}
-                  aria-label={`Product slide ${slideIndex + 1} of ${productSlides.length}, up to four products`}
-                  className="w-full shrink-0"
-                >
-                  <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-                    {slide.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onView={(selectedProduct) => onViewDetail(selectedProduct, activeSlide)}
-                        onAdd={onAdd}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {productSlides.length > 1 && (
-              <p className="mt-4 text-center text-xs font-medium text-slate-500">
-                {activeSlide + 1} / {productSlides.length} · Swipe or use the arrows to see up to four more products
-              </p>
-            )}
+          <div className="mt-6 space-y-5 sm:mt-8 sm:space-y-7">
+            {productSections.map((section, sectionIndex) => section.type === 'normal' ? (
+              <div key={`${section.products[0]?.id}-normal`} className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+                {section.products.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    onView={(selected) => onViewDetail(selected, sectionIndex, 0)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <ProductCarousel
+                key={`${section.products[0]?.id}-carousel`}
+                products={section.products}
+                initialSlide={sectionIndex === initialSectionIndex ? initialSlideIndex : 0}
+                onViewDetail={(selected, slideIndex) => onViewDetail(selected, sectionIndex, slideIndex)}
+              />
+            ))}
           </div>
         )}
       </div>

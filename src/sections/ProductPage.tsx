@@ -172,7 +172,7 @@ export function ProductPage({
           {relatedProducts.length ? (
             <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
               {relatedProducts.map((item) => (
-                <ProductCard key={item.id} product={item} onView={onViewProduct} onAdd={onAddToCart} />
+                <ProductCard key={item.id} product={item} onView={onViewProduct} />
               ))}
             </div>
           ) : (
