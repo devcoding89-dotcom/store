@@ -4,6 +4,8 @@ import type { Session } from '@supabase/supabase-js'
 import Landing from './pages/Landing'
 import Home from './pages/Home'
 import { AdminPage } from './pages/AdminPage'
+import AboutPage from './pages/AboutPage'
+import SellerPage from './pages/SellerPage'
 import { PublicInfo } from './pages/PublicInfo'
 import { supabase, toAppUser } from '@/lib/supabase'
 import type { User } from '@/types/marketplace'
@@ -53,6 +55,8 @@ export default function App() {
         path="/admin"
         element={<AdminPage />}
       />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/sell" element={<SellerPage />} />
       <Route path="/terms" element={<PublicInfo page="terms" />} />
       <Route path="/returns" element={<PublicInfo page="returns" />} />
       <Route path="/faq" element={<PublicInfo page="faq" />} />

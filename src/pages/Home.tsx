@@ -6,8 +6,6 @@ import { Hero } from '@/sections/Hero'
 import { Marquee } from '@/sections/Marquee'
 import { Categories } from '@/sections/Categories'
 import { Featured } from '@/sections/Featured'
-import { HowItWorks } from '@/sections/HowItWorks'
-import { SellWithUs } from '@/sections/SellWithUs'
 import { TrackOrder } from '@/sections/TrackOrder'
 import { CartDrawer } from '@/sections/CartDrawer'
 import { AINegotiatorChat } from '@/sections/AINegotiatorChat'
@@ -237,8 +235,6 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
               onViewDetail={handleViewDetail}
               onProductsLoaded={restoreProductListScroll}
             />
-            <HowItWorks />
-            <SellWithUs />
           </>
         )}
         <TrackOrder prefill={trackCode} />

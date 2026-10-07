@@ -3,7 +3,8 @@ import { Menu, ShoppingBag, X, User, Search, ShieldCheck, Package } from 'lucide
 
 const NAV = [
   { label: 'All Products', href: '#shop' },
-  { label: 'How It Works', href: '#how-it-works' },
+  { label: 'How It Works', href: '/about' },
+  { label: 'For Sellers', href: '/sell' },
   { label: 'Track Order', href: '#track' },
 ]
 

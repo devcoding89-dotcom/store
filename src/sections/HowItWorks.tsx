@@ -21,7 +21,7 @@ const STEPS = [
     n: '03',
     icon: CreditCard,
     title: 'Order with SHOPLY TOWN',
-    body: `Discuss your price with our sales desk or pay the listed price. Submit your order and receive a code — something like ${MARKETPLACE_CONFIG.orderPrefix}-48291.`,
+    body: `Discuss your price with our sales desk or choose the listed price. Submit your order and receive a code — something like ${MARKETPLACE_CONFIG.orderPrefix}-48291. Confirm payment instructions with our team via WhatsApp.`,
     color: 'bg-amber-50 text-amber-600',
   },
   {

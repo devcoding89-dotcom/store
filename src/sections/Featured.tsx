@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useState, useMemo, useRef } from 'react'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { fetchProducts } from '@/lib/api'
 import type { Product } from '@/types/marketplace'
 import { ProductCard } from '@/sections/ProductCard'
@@ -23,11 +23,12 @@ type ProductSection = {
 type ProductCarouselProps = {
   products: Product[]
   initialSlide: number
+  showSwipeHint: boolean
   onViewDetail: (product: Product, slideIndex: number) => void
 }
 
-function ProductCarousel({ products, initialSlide, onViewDetail }: ProductCarouselProps) {
-  const touchStart = useRef<{ x: number; y: number } | null>(null)
+function ProductCarousel({ products, initialSlide, showSwipeHint, onViewDetail }: ProductCarouselProps) {
+  const pointerStart = useRef<{ x: number; y: number } | null>(null)
   const slides = useMemo(() => {
     const result: Product[][] = []
     for (let index = 0; index < products.length; index += 4) {
@@ -43,49 +44,28 @@ function ProductCarousel({ products, initialSlide, onViewDetail }: ProductCarous
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/70 p-3 sm:p-5">
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">Swipe to explore</p>
-        {slides.length > 1 && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => moveSlide(-1)}
-              disabled={activeSlide === 0}
-              aria-label="Show previous four products"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
-            >
-              <ChevronLeft size={17} />
-            </button>
-            <button
-              type="button"
-              onClick={() => moveSlide(1)}
-              disabled={activeSlide === slides.length - 1}
-              aria-label="Show next four products"
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 disabled:opacity-40"
-            >
-              <ChevronRight size={17} />
-            </button>
-          </div>
-        )}
-      </div>
+      {showSwipeHint && (
+        <p className="mb-3 text-center text-xs font-bold uppercase tracking-wider text-emerald-800">
+          Swipe to explore
+        </p>
+      )}
       <div
-        className="flex touch-pan-y transition-transform duration-500 ease-out"
+        className="flex touch-pan-y select-none transition-transform duration-500 ease-out"
         style={{ transform: `translateX(-${activeSlide * 100}%)` }}
-        onTouchStart={(event) => {
-          const touch = event.touches[0]
-          touchStart.current = { x: touch.clientX, y: touch.clientY }
+        onPointerDown={(event) => {
+          pointerStart.current = { x: event.clientX, y: event.clientY }
         }}
-        onTouchEnd={(event) => {
-          const start = touchStart.current
-          const touch = event.changedTouches[0]
-          touchStart.current = null
-          if (!start || !touch) return
-          const deltaX = touch.clientX - start.x
-          const deltaY = touch.clientY - start.y
+        onPointerUp={(event) => {
+          const start = pointerStart.current
+          pointerStart.current = null
+          if (!start) return
+          const deltaX = event.clientX - start.x
+          const deltaY = event.clientY - start.y
           if (Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
             moveSlide(deltaX < 0 ? 1 : -1)
           }
         }}
+        onPointerCancel={() => { pointerStart.current = null }}
       >
         {slides.map((slide, slideIndex) => (
           <div key={slide[0]?.id ?? slideIndex} className="w-full shrink-0">
@@ -268,6 +248,7 @@ export function Featured({
                 key={`${section.products[0]?.id}-carousel`}
                 products={section.products}
                 initialSlide={sectionIndex === initialSectionIndex ? initialSlideIndex : 0}
+                showSwipeHint={sectionIndex === productSections.findIndex((item) => item.type === 'carousel')}
                 onViewDetail={(selected, slideIndex) => onViewDetail(selected, sectionIndex, slideIndex)}
               />
             ))}
