@@ -10,8 +10,9 @@ type FeaturedProps = {
   onCategory: (c: string) => void
   onClearSearch: () => void
   onAdd: (p: Product) => void
-  onViewDetail: (p: Product) => void
+  onViewDetail: (p: Product, slideIndex: number) => void
   onProductsLoaded: () => void
+  initialSlide: number
 }
 
 export function Featured({
@@ -22,12 +23,14 @@ export function Featured({
   onAdd,
   onViewDetail,
   onProductsLoaded,
+  initialSlide,
 }: FeaturedProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [activeSlide, setActiveSlide] = useState(0)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
+  const initialSlideApplied = useRef(false)
 
   // Fetch all products once for dynamic categories
   useEffect(() => {
@@ -44,12 +47,14 @@ export function Featured({
         category !== 'All' ? category : undefined,
         query || undefined,
       )
-      setActiveSlide(0)
+      const lastSlide = Math.max(0, Math.ceil(data.length / 4) - 1)
+      setActiveSlide(initialSlideApplied.current ? 0 : Math.min(initialSlide, lastSlide))
+      initialSlideApplied.current = true
       setProducts(data)
       setLoading(false)
     }
     load()
-  }, [category, query])
+  }, [category, initialSlide, query])
 
   useLayoutEffect(() => {
     if (!loading) onProductsLoaded()
@@ -194,7 +199,12 @@ export function Featured({
                 >
                   <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
                     {slide.map((product) => (
-                      <ProductCard key={product.id} product={product} onView={onViewDetail} onAdd={onAdd} />
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onView={(selectedProduct) => onViewDetail(selectedProduct, activeSlide)}
+                        onAdd={onAdd}
+                      />
                     ))}
                   </div>
                 </div>
