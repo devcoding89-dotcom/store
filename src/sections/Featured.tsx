@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useState, useMemo } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useLayoutEffect, useState, useMemo, useRef } from 'react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { fetchProducts } from '@/lib/api'
 import type { Product } from '@/types/marketplace'
 import { ProductCard } from '@/sections/ProductCard'
@@ -26,6 +26,8 @@ export function Featured({
   const [products, setProducts] = useState<Product[]>([])
   const [allProducts, setAllProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeSlide, setActiveSlide] = useState(0)
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   // Fetch all products once for dynamic categories
   useEffect(() => {
@@ -42,6 +44,7 @@ export function Featured({
         category !== 'All' ? category : undefined,
         query || undefined,
       )
+      setActiveSlide(0)
       setProducts(data)
       setLoading(false)
     }
@@ -57,6 +60,13 @@ export function Featured({
     const cats = Array.from(new Set(allProducts.map((p) => p.category))).filter(Boolean)
     return ['All', ...cats]
   }, [allProducts])
+  const productSlides = useMemo(() => {
+    const slides: Product[][] = []
+    for (let index = 0; index < products.length; index += 4) {
+      slides.push(products.slice(index, index + 4))
+    }
+    return slides
+  }, [products])
 
   return (
     <section id="shop" className="scroll-mt-20 bg-slate-50/60 py-16 sm:py-20 border-b border-slate-200">
@@ -71,9 +81,33 @@ export function Featured({
               Explore Products & Start Bargaining
             </h2>
           </div>
-          <p className="text-sm font-medium text-slate-500">
-            {products.length} {products.length === 1 ? 'item' : 'items'} available for delivery
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm font-medium text-slate-500">
+              {products.length} {products.length === 1 ? 'item' : 'items'} available for delivery
+            </p>
+            {!loading && productSlides.length > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveSlide((slide) => Math.max(0, slide - 1))}
+                  disabled={activeSlide === 0}
+                  aria-label="Show previous four products"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveSlide((slide) => Math.min(productSlides.length - 1, slide + 1))}
+                  disabled={activeSlide === productSlides.length - 1}
+                  aria-label="Show next four products"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Dynamic Category Filter Pills */}
@@ -131,10 +165,46 @@ export function Featured({
           </div>
         ) : (
           /* Product Grid */
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:mt-8 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5">
-            {products.map((p) => (
-              <ProductCard key={p.id} product={p} onView={onViewDetail} onAdd={onAdd} />
-            ))}
+          <div className="mt-6 overflow-hidden sm:mt-8">
+            <div
+              className="flex touch-pan-y transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${activeSlide * 100}%)` }}
+              aria-live="polite"
+              onTouchStart={(event) => {
+                const touch = event.touches[0]
+                touchStart.current = { x: touch.clientX, y: touch.clientY }
+              }}
+              onTouchEnd={(event) => {
+                const start = touchStart.current
+                const touch = event.changedTouches[0]
+                touchStart.current = null
+                if (!start || !touch) return
+
+                const deltaX = touch.clientX - start.x
+                const deltaY = touch.clientY - start.y
+                if (Math.abs(deltaX) < 45 || Math.abs(deltaX) <= Math.abs(deltaY)) return
+                setActiveSlide((slide) => Math.max(0, Math.min(productSlides.length - 1, slide + (deltaX < 0 ? 1 : -1))))
+              }}
+            >
+              {productSlides.map((slide, slideIndex) => (
+                <div
+                  key={slide[0]?.id ?? slideIndex}
+                  aria-label={`Product slide ${slideIndex + 1} of ${productSlides.length}, up to four products`}
+                  className="w-full shrink-0"
+                >
+                  <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+                    {slide.map((product) => (
+                      <ProductCard key={product.id} product={product} onView={onViewDetail} onAdd={onAdd} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {productSlides.length > 1 && (
+              <p className="mt-4 text-center text-xs font-medium text-slate-500">
+                {activeSlide + 1} / {productSlides.length} · Swipe or use the arrows to see up to four more products
+              </p>
+            )}
           </div>
         )}
       </div>
