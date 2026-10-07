@@ -166,7 +166,9 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
     const scrollY = pendingScrollRestore.current
     if (scrollY === null) return
     pendingScrollRestore.current = null
-    window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'auto' }))
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => window.scrollTo({ top: scrollY, behavior: 'auto' }))
+    })
   }, [])
 
   const handleNegotiate = useCallback((p: Product) => {
