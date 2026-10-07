@@ -60,7 +60,7 @@ export async function fetchProducts(category?: string, search?: string): Promise
 
 export async function fetchAdminProducts(): Promise<Product[]> {
   const res = await adminFetch('/admin/products')
-  if (!res.ok) throw new Error('Failed to fetch admin products')
+  if (!res.ok) throw new Error(await getApiError(res, 'Failed to fetch admin products'))
   return await res.json()
 }
 
@@ -70,7 +70,7 @@ export async function createAdminProduct(productData: Partial<Product>): Promise
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(productData),
   })
-  if (!res.ok) throw new Error('Failed to create product')
+  if (!res.ok) throw new Error(await getApiError(res, 'Failed to create product'))
   return await res.json()
 }
 
@@ -80,7 +80,7 @@ export async function updateAdminProduct(id: string, productData: Partial<Produc
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(productData),
   })
-  if (!res.ok) throw new Error('Failed to update product')
+  if (!res.ok) throw new Error(await getApiError(res, 'Failed to update product'))
   return await res.json()
 }
 

@@ -56,6 +56,14 @@ function formatCategory(cat) {
   return cat.charAt(0).toUpperCase() + cat.slice(1)
 }
 
+function toDatabaseCategory(category) {
+  const value = String(category || '').toLowerCase().trim()
+  if (value.includes('phone')) return 'phones'
+  if (value.includes('power')) return 'powerbanks'
+  if (value.includes('charger')) return 'chargers'
+  return 'accessories'
+}
+
 class Database {
   constructor() {
     this.data = {
@@ -75,56 +83,59 @@ class Database {
       },
     }
     this.load()
-    this.syncFromSupabase().catch((err) => {
-      console.warn('Initial Supabase sync warning:', err.message)
-    })
+    this.syncInFlight = null
+    this.productVersion = 0
   }
 
   async syncFromSupabase() {
-    try {
-      const { data, error } = await supabase.from('products').select('*')
-      if (error) {
-        console.warn('Could not fetch products from Supabase:', error.message)
-        return
-      }
+    if (!this.syncInFlight) {
+      const versionAtStart = this.productVersion
+      this.syncInFlight = (async () => {
+        const { data, error } = await supabase.from('products').select('*')
+        if (error) throw error
+        if (versionAtStart !== this.productVersion) return false
 
-      if (data && data.length > 0) {
-        const mapped = data.map((p) => {
-          const listing = Number(p.price || p.listing_price || 0)
-          const cost = Number(p.vendor_cost || Math.round(listing * 0.82))
-          const floor = Number(p.floor_price || Math.round(listing * 0.90))
-
-          return {
-            id: p.id,
-            name: p.name,
-            category: formatCategory(p.category),
-            image: p.image || (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=700',
-            images: p.images || (p.image ? [p.image] : []),
-            description: p.description || '',
-            features: p.features || [],
-            listing_price: listing,
-            vendor_cost: cost,
-            floor_price: floor, // The owner's last price for negotiation!
-            vendor_name: p.vendor_name || 'Direct Gadget Hub',
-            vendor_phone: p.vendor_phone || this.data.settings.owner_phone,
-            vendor_stall_location: p.vendor_stall_location || 'Tech Quarter, Suite 12',
-            in_stock: p.stock !== undefined ? p.stock > 0 : true,
-            stock: p.stock ?? 1,
-            badge: p.badge || (p.is_bestseller ? 'BESTSELLER' : undefined),
-          }
-        })
-
-        // Filter out any stale mock products from local database
-        const localCustom = this.data.products.filter(
-          (p) => !FAKE_PRODUCT_IDS.has(p.id) && !mapped.some((m) => m.id === p.id)
-        )
-
-        this.data.products = [...mapped, ...localCustom]
+        this.data.products = (data || []).map((product) => this.mapSupabaseProduct(product))
         this.save()
-        console.log(`Synced ${mapped.length} authentic products from Supabase!`)
-      }
-    } catch (err) {
-      console.error('syncFromSupabase error:', err.message)
+        console.log(`Synced ${this.data.products.length} products from Supabase.`)
+        return true
+      })()
+    }
+
+    let isCurrent
+    try {
+      isCurrent = await this.syncInFlight
+    } finally {
+      this.syncInFlight = null
+    }
+    if (!isCurrent) return this.syncFromSupabase()
+  }
+
+  mapSupabaseProduct(product) {
+    const listing = Number(product.price || product.listing_price || 0)
+    const stock = Number(product.stock ?? 1)
+    const productFeatures = product.features || []
+    const storedCategory = productFeatures.find((feature) => /^Category:\s*/i.test(feature))
+    const displayCategory = storedCategory
+      ? storedCategory.replace(/^Category:\s*/i, '')
+      : formatCategory(product.category)
+    return {
+      id: product.id,
+      name: product.name,
+      category: displayCategory,
+      image: product.image || product.images?.[0] || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=700',
+      images: product.images || (product.image ? [product.image] : []),
+      description: product.description || '',
+      features: productFeatures.filter((feature) => !/^Category:\s*/i.test(feature)),
+      listing_price: listing,
+      vendor_cost: Number(product.vendor_cost || Math.round(listing * 0.82)),
+      floor_price: Number(product.floor_price || Math.round(listing * 0.9)),
+      vendor_name: product.vendor_name || 'Direct Gadget Hub',
+      vendor_phone: product.vendor_phone || this.data.settings.owner_phone,
+      vendor_stall_location: product.vendor_stall_location || 'Tech Quarter, Suite 12',
+      in_stock: stock > 0,
+      stock,
+      badge: product.badge || (product.is_bestseller ? 'BESTSELLER' : undefined),
     }
   }
 
@@ -164,97 +175,86 @@ class Database {
   }
 
   async addProduct(product) {
+    this.productVersion += 1
     const listingPrice = Number(product.listing_price || product.price || 0)
     const floorPrice = Number(product.floor_price || Math.round(listingPrice * 0.9))
     const vendorCost = Number(product.vendor_cost || Math.round(listingPrice * 0.82))
 
-    const newProduct = {
-      id: `prod-${Date.now()}`,
-      in_stock: true,
-      stock: product.stock ? Number(product.stock) : 5,
-      ...product,
-      category: formatCategory(product.category),
-      listing_price: listingPrice,
-      floor_price: floorPrice,
-      vendor_cost: vendorCost,
-      vendor_name: product.vendor_name || 'Marketplace Seller',
-      vendor_phone: product.vendor_phone || this.data.settings.owner_phone,
-      vendor_stall_location: product.vendor_stall_location || 'Central Market Plaza',
-    }
+    const stock = Number(product.stock ?? 5)
+    const { data, error } = await supabase
+      .from('products')
+      .insert({
+        name: product.name,
+        category: toDatabaseCategory(product.category),
+        description: product.description || '',
+        image: product.image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=700',
+        images: product.images || (product.image ? [product.image] : []),
+        price: listingPrice,
+        floor_price: floorPrice,
+        vendor_cost: vendorCost,
+        vendor_name: product.vendor_name || 'Marketplace Seller',
+        vendor_phone: product.vendor_phone || this.data.settings.owner_phone,
+        vendor_stall_location: product.vendor_stall_location || 'Central Market Plaza',
+        stock,
+        features: [`Category: ${formatCategory(product.category)}`, ...(product.features || [])],
+        badge: product.badge || null,
+      })
+      .select('*')
+      .single()
+    if (error) throw error
+    if (!data) throw new Error('Supabase did not return the saved product.')
 
-    this.data.products.unshift(newProduct)
+    const savedProduct = this.mapSupabaseProduct(data)
+    this.productVersion += 1
+    this.data.products = [savedProduct, ...this.data.products.filter((item) => item.id !== savedProduct.id)]
     this.save()
-
-    // Also persist to Supabase
-    try {
-      // Map category safely to avoid constraint violations if not yet dropped
-      const rawCat = (product.category || 'accessories').toLowerCase()
-      let safeCat = rawCat
-      if (!['phones', 'accessories', 'powerbanks', 'chargers'].includes(safeCat)) {
-        safeCat = 'accessories' // fallback for Supabase check constraint
-      }
-
-      const { data, error } = await supabase.from('products').insert([
-        {
-          name: newProduct.name,
-          category: safeCat,
-          description: newProduct.description || 'Verified product',
-          image: newProduct.image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=700',
-          price: listingPrice,
-          floor_price: floorPrice,
-          vendor_cost: vendorCost,
-          vendor_name: newProduct.vendor_name,
-          vendor_phone: newProduct.vendor_phone,
-          vendor_stall_location: newProduct.vendor_stall_location,
-          stock: newProduct.stock,
-          features: [
-            `Category: ${newProduct.category}`,
-            ...(product.features || []),
-          ],
-        },
-      ]).select()
-
-      if (!error && data && data[0]) {
-        // Update local product ID with Supabase UUID
-        newProduct.id = data[0].id
-        this.save()
-        console.log(`Product "${newProduct.name}" saved to Supabase with ID ${data[0].id}`)
-      } else if (error) {
-        console.warn('Could not insert product to Supabase:', error.message)
-      }
-    } catch (err) {
-      console.warn('Supabase product insert error:', err.message)
-    }
-
-    return newProduct
+    return savedProduct
   }
 
-  updateProduct(id, updates) {
-    const index = this.data.products.findIndex((p) => p.id === id)
-    if (index !== -1) {
-      this.data.products[index] = { ...this.data.products[index], ...updates }
-      this.save()
-      return this.data.products[index]
-    }
-    return null
+  async updateProduct(id, updates) {
+    this.productVersion += 1
+    const databaseUpdates = {}
+    if (updates.name !== undefined) databaseUpdates.name = updates.name
+    if (updates.category !== undefined) databaseUpdates.category = toDatabaseCategory(updates.category)
+    if (updates.description !== undefined) databaseUpdates.description = updates.description
+    if (updates.image !== undefined) databaseUpdates.image = updates.image
+    if (updates.images !== undefined) databaseUpdates.images = updates.images
+    if (updates.listing_price !== undefined) databaseUpdates.price = Number(updates.listing_price)
+    if (updates.floor_price !== undefined) databaseUpdates.floor_price = Number(updates.floor_price)
+    if (updates.vendor_cost !== undefined) databaseUpdates.vendor_cost = Number(updates.vendor_cost)
+    if (updates.vendor_name !== undefined) databaseUpdates.vendor_name = updates.vendor_name
+    if (updates.vendor_phone !== undefined) databaseUpdates.vendor_phone = updates.vendor_phone
+    if (updates.vendor_stall_location !== undefined) databaseUpdates.vendor_stall_location = updates.vendor_stall_location
+    if (updates.stock !== undefined) databaseUpdates.stock = Number(updates.stock)
+    if (updates.features !== undefined) databaseUpdates.features = updates.features
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(databaseUpdates)
+      .eq('id', id)
+      .select('*')
+      .maybeSingle()
+    if (error) throw error
+    if (!data) return null
+
+    const updatedProduct = this.mapSupabaseProduct(data)
+    this.productVersion += 1
+    this.data.products = this.data.products.map((item) => item.id === id ? updatedProduct : item)
+    this.save()
+    return updatedProduct
   }
 
   async deleteProduct(id) {
-    const productExistsLocally = this.data.products.some((product) => product.id === id)
-    let deletedFromSupabase = false
+    this.productVersion += 1
+    const { data, error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id)
+      .select('id')
+    if (error) throw error
+    if (!data?.length) return false
 
-    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
-      const { data, error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id)
-        .select('id')
-      if (error) throw error
-      deletedFromSupabase = Boolean(data?.length)
-    }
-
-    if (!productExistsLocally && !deletedFromSupabase) return false
-
+    this.productVersion += 1
     this.data.products = this.data.products.filter((product) => product.id !== id)
     this.save()
     return true

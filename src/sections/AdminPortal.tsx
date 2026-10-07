@@ -72,6 +72,8 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   const [showProductModal, setShowProductModal] = useState(false)
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [isCustomCategory, setIsCustomCategory] = useState(false)
+  const [productSaveError, setProductSaveError] = useState('')
+  const [savingProduct, setSavingProduct] = useState(false)
 
   const [formData, setFormData] = useState<{
     name: string
@@ -127,7 +129,7 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
       setOrders(o)
     } catch (err) {
       console.error('Failed to load admin data:', err)
-      setLoadError('Could not load orders from the database. Check your connection and try again.')
+      setLoadError(err instanceof Error ? err.message : 'Could not load admin data. Check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -222,6 +224,7 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
 
   // Open modal for adding a new product
   const handleOpenAddModal = () => {
+    setProductSaveError('')
     setEditingProductId(null)
     setIsCustomCategory(false)
     setFormData({
@@ -243,6 +246,7 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
 
   // Open modal for editing an existing product
   const handleOpenEditModal = (p: Product) => {
+    setProductSaveError('')
     setEditingProductId(p.id)
     const isCustom = !DEFAULT_CATEGORIES.includes(p.category)
     setIsCustomCategory(isCustom)
@@ -322,8 +326,9 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   // Save product (Create or Edit)
   const handleSubmitProduct = async (e: React.FormEvent) => {
     e.preventDefault()
+    setProductSaveError('')
     if (!formData.name || !formData.listing_price) {
-      alert('Product name and listing price are required')
+      setProductSaveError('Product name and a valid listing price are required.')
       return
     }
 
@@ -352,14 +357,21 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
       vendor_stall_location: formData.vendor_stall_location,
     }
 
-    if (editingProductId) {
-      await updateAdminProduct(editingProductId, payload)
-    } else {
-      await createAdminProduct(payload)
+    setSavingProduct(true)
+    try {
+      if (editingProductId) {
+        await updateAdminProduct(editingProductId, payload)
+      } else {
+        await createAdminProduct(payload)
+      }
+      await loadData()
+      setShowProductModal(false)
+    } catch (err) {
+      console.error('Failed to save product:', err)
+      setProductSaveError(err instanceof Error ? err.message : 'Could not save the product. Please try again.')
+    } finally {
+      setSavingProduct(false)
     }
-
-    setShowProductModal(false)
-    loadData()
   }
 
   // Lookup order for QR delivery
@@ -1067,6 +1079,11 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
             </div>
 
             <form onSubmit={handleSubmitProduct} className="mt-5 space-y-5">
+              {productSaveError && (
+                <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
+                  {productSaveError}
+                </p>
+              )}
               {/* Product Name */}
               <div>
                 <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block mb-1">
@@ -1339,15 +1356,17 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
                 <button
                   type="button"
                   onClick={() => setShowProductModal(false)}
+                  disabled={savingProduct}
                   className="rounded-xl border border-slate-200 px-5 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm hover:bg-emerald-700 transition-colors"
+                  disabled={savingProduct}
+                  className="rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {editingProductId ? 'Save Changes' : 'Publish Product'}
+                  {savingProduct ? 'Saving…' : editingProductId ? 'Save Changes' : 'Publish Product'}
                 </button>
               </div>
             </form>

@@ -51,7 +51,9 @@ app.use('/api/admin', requireAdmin)
 // --- PRODUCTS API ---
 
 // Public products for customer storefront
-app.get('/api/products', (req, res) => {
+app.get('/api/products', async (req, res) => {
+  try {
+  await db.syncFromSupabase()
   const { category, search } = req.query
   let products = db.getProducts().filter((p) => p.in_stock)
 
@@ -82,53 +84,59 @@ app.get('/api/products', (req, res) => {
     vendor_stall_location: 'Online store',
   }))
   res.json(safeProducts)
+  } catch (error) {
+    console.error('Failed to load storefront products:', error)
+    res.status(503).json({ error: 'Products are temporarily unavailable. Please try again.' })
+  }
 })
 
 // Admin products list (includes vendor_cost, floor_price, vendor phone & profit potential)
-app.get('/api/admin/products', (req, res) => {
-  res.json(db.getProducts())
+app.get('/api/admin/products', async (req, res) => {
+  try {
+    await db.syncFromSupabase()
+    res.json(db.getProducts())
+  } catch (error) {
+    console.error('Failed to load admin products:', error)
+    res.status(503).json({ error: 'Could not load products from Supabase.' })
+  }
 })
 
 // Admin add new product
 app.post('/api/admin/products', async (req, res) => {
-  const {
-    name,
-    category,
-    image,
-    description,
-    vendor_cost,
-    listing_price,
-    floor_price,
-    vendor_name,
-    vendor_phone,
-    vendor_stall_location,
-  } = req.body
-
-  if (!name || !listing_price) {
+  const body = req.body || {}
+  const { name, category, listing_price } = body
+  if (typeof name !== 'string' || !name.trim() || !Number.isFinite(Number(listing_price)) || Number(listing_price) <= 0) {
     return res.status(400).json({ error: 'Name and listing price are required' })
   }
 
-  const newProduct = await db.addProduct({
-    name,
-    category: category || 'General',
-    image: image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=700',
-    description: description || '',
-    vendor_cost: Number(vendor_cost || Math.round(Number(listing_price) * 0.82)),
-    listing_price: Number(listing_price),
-    floor_price: Number(floor_price || Math.round(Number(listing_price) * 0.9)),
-    vendor_name: vendor_name || 'Marketplace Seller',
-    vendor_phone: vendor_phone || db.data.settings.owner_phone,
-    vendor_stall_location: vendor_stall_location || 'Central Market Plaza',
-  })
-
-  res.status(201).json(newProduct)
+  try {
+    const newProduct = await db.addProduct({
+      ...body,
+      name: name.trim(),
+      category: category || 'General',
+      listing_price: Number(listing_price),
+      floor_price: Number(body.floor_price || Math.round(Number(listing_price) * 0.9)),
+      vendor_cost: Number(body.vendor_cost || Math.round(Number(listing_price) * 0.82)),
+      vendor_name: body.vendor_name || 'Marketplace Seller',
+      vendor_phone: body.vendor_phone || db.data.settings.owner_phone,
+    })
+    res.status(201).json(newProduct)
+  } catch (error) {
+    console.error('Failed to save admin product:', error)
+    res.status(500).json({ error: 'Could not save product to Supabase. Check the database connection and product fields, then try again.' })
+  }
 })
 
 // Admin update product
-app.put('/api/admin/products/:id', (req, res) => {
-  const updated = db.updateProduct(req.params.id, req.body)
-  if (!updated) return res.status(404).json({ error: 'Product not found' })
-  res.json(updated)
+app.put('/api/admin/products/:id', async (req, res) => {
+  try {
+    const updated = await db.updateProduct(req.params.id, req.body)
+    if (!updated) return res.status(404).json({ error: 'Product not found' })
+    res.json(updated)
+  } catch (error) {
+    console.error('Failed to update admin product:', error)
+    res.status(500).json({ error: 'Could not save product changes to Supabase.' })
+  }
 })
 
 // Admin delete product
@@ -398,6 +406,7 @@ app.post('/api/chat', async (req, res) => {
     const { message, history, currentProductId } = req.body
     if (!message) return res.status(400).json({ error: 'Message is required' })
 
+    await db.syncFromSupabase()
     const result = await processChat({ message, history, currentProductId })
     res.json(result)
   } catch (err) {
@@ -442,6 +451,7 @@ app.post('/api/auth/register', (req, res) => {
 // --- STATS ---
 app.get('/api/admin/stats', async (req, res) => {
   try {
+    await db.syncFromSupabase()
     res.json(await db.getStats())
   } catch (error) {
     console.error('Failed to load admin stats:', error)
