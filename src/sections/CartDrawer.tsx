@@ -95,7 +95,7 @@ export function CartDrawer({
         ) : (
           <>
             {/* Cart Items List */}
-            <ul className="flex-1 overflow-y-auto divide-y divide-slate-100 p-6 space-y-4">
+            <ul className="flex-1 space-y-4 overflow-y-auto divide-y divide-slate-100 p-4 sm:p-6">
               {items.map(({ product, qty }) => (
                 <li key={product.id} className="flex gap-4 pt-4 first:pt-0">
                   <img
@@ -144,7 +144,7 @@ export function CartDrawer({
             </ul>
 
             {/* Subtotal & Proceed to AI Checkout */}
-            <div className="shrink-0 border-t border-slate-200 p-6 bg-slate-50 space-y-4">
+            <div className="shrink-0 space-y-4 border-t border-slate-200 bg-slate-50 p-4 sm:p-6">
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between text-sm text-slate-600">
                   <span>Subtotal:</span>

@@ -29,6 +29,7 @@ type ProductCarouselProps = {
 
 function ProductCarousel({ products, initialSlide, showSwipeHint, onViewDetail }: ProductCarouselProps) {
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
+  const suppressClick = useRef(false)
   const slides = useMemo(() => {
     const result: Product[][] = []
     for (let index = 0; index < products.length; index += 4) {
@@ -53,6 +54,7 @@ function ProductCarousel({ products, initialSlide, showSwipeHint, onViewDetail }
         className="flex touch-pan-y select-none transition-transform duration-500 ease-out"
         style={{ transform: `translateX(-${activeSlide * 100}%)` }}
         onPointerDown={(event) => {
+          suppressClick.current = false
           pointerStart.current = { x: event.clientX, y: event.clientY }
         }}
         onPointerUp={(event) => {
@@ -62,10 +64,17 @@ function ProductCarousel({ products, initialSlide, showSwipeHint, onViewDetail }
           const deltaX = event.clientX - start.x
           const deltaY = event.clientY - start.y
           if (Math.abs(deltaX) >= 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
+            suppressClick.current = true
             moveSlide(deltaX < 0 ? 1 : -1)
           }
         }}
         onPointerCancel={() => { pointerStart.current = null }}
+        onClickCapture={(event) => {
+          if (!suppressClick.current) return
+          suppressClick.current = false
+          event.preventDefault()
+          event.stopPropagation()
+        }}
       >
         {slides.map((slide, slideIndex) => (
           <div key={slide[0]?.id ?? slideIndex} className="w-full shrink-0">
@@ -136,10 +145,7 @@ export function Featured({
   }, [allProducts])
   const productSections = useMemo(() => {
     const pattern = [
-      { type: 'normal', count: 8 },
-      { type: 'carousel', count: 8 },
       { type: 'normal', count: 4 },
-      { type: 'carousel', count: 8 },
       { type: 'carousel', count: 8 },
     ] as const
     const sections: ProductSection[] = []
@@ -158,32 +164,32 @@ export function Featured({
   }, [products])
 
   return (
-    <section id="shop" className="scroll-mt-20 bg-slate-50/60 py-16 sm:py-20 border-b border-slate-200">
+    <section id="shop" className="scroll-mt-20 border-b border-slate-200 bg-slate-50/60 py-8 sm:py-14 lg:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="flex flex-wrap items-end justify-between gap-4 pb-6 border-b border-slate-200">
-          <div>
+        <div className="flex flex-col gap-2 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4 sm:pb-6">
+          <div className="min-w-0">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
               Live Verified Marketplace
             </span>
-            <h2 className="mt-1 font-display text-3xl sm:text-4xl font-bold tracking-tight text-slate-900">
+            <h2 className="mt-1 font-display text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl lg:text-4xl">
               Explore Products & Start Bargaining
             </h2>
           </div>
           <div className="flex items-center gap-3">
-            <p className="text-sm font-medium text-slate-500">
+            <p className="text-xs font-medium text-slate-500 sm:text-sm">
               {products.length} {products.length === 1 ? 'item' : 'items'} available for delivery
             </p>
           </div>
         </div>
 
         {/* Dynamic Category Filter Pills */}
-        <div className="mt-6 flex flex-wrap gap-2 items-center">
+        <div className="no-scrollbar mt-4 flex items-center gap-2 overflow-x-auto pb-2 sm:mt-6 sm:flex-wrap sm:overflow-visible sm:pb-0">
           {categoryFilters.map((f) => (
             <button
               key={f}
               onClick={() => onCategory(f)}
-              className={`rounded-full px-4 py-2 text-xs font-semibold transition-all ${
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all ${
                 category === f
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-white text-slate-600 border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40'
@@ -196,8 +202,8 @@ export function Featured({
 
         {/* Search Results Filter Banner */}
         {query && (
-          <div className="mt-5 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-            <p>
+          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 sm:flex-row sm:items-center sm:justify-between">
+            <p className="min-w-0 break-words">
               Showing search results for <span className="font-bold">"{query.trim()}"</span> ({products.length} items found)
             </p>
             <button
@@ -218,7 +224,7 @@ export function Featured({
             </p>
           </div>
         ) : products.length === 0 ? (
-          <div className="mt-12 rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-xs">
+          <div className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center shadow-xs sm:mt-12 sm:p-12">
             <h3 className="font-display text-2xl font-bold text-slate-900">No products found</h3>
             <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
               We couldn't find anything matching your search. Try searching for "book", "iphone", or "watch".
@@ -232,7 +238,7 @@ export function Featured({
           </div>
         ) : (
           /* Product Grid */
-          <div className="mt-6 space-y-5 sm:mt-8 sm:space-y-7">
+          <div className="mt-5 space-y-5 sm:mt-8 sm:space-y-7">
             {productSections.map((section, sectionIndex) => section.type === 'normal' ? (
               <div key={`${section.products[0]?.id}-normal`} className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
                 {section.products.map((product) => (

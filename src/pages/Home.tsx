@@ -2,9 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { MessageCircle } from 'lucide-react'
 import { Header } from '@/sections/Header'
-import { Hero } from '@/sections/Hero'
-import { Marquee } from '@/sections/Marquee'
-import { Categories } from '@/sections/Categories'
 import { Featured } from '@/sections/Featured'
 import { TrackOrder } from '@/sections/TrackOrder'
 import { CartDrawer } from '@/sections/CartDrawer'
@@ -118,12 +115,6 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
     scrollToShop()
   }, [])
 
-  const pickCategory = useCallback((c: string) => {
-    setCategory(c)
-    setQuery('')
-    scrollToShop()
-  }, [])
-
   const addToCart = useCallback((p: Product) => {
     setCart((prev) => {
       const found = prev.find((i) => i.product.id === p.id)
@@ -218,13 +209,6 @@ export default function Home({ currentUser, onUserChange }: HomeProps) {
           />
         ) : (
           <>
-            <Hero
-              onSearch={search}
-              onOpenConcierge={() => setChatOpen(true)}
-            />
-            <Marquee />
-            <Categories onPick={pickCategory} />
-
             <Featured
               query={query}
               category={category}

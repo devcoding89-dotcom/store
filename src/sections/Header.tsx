@@ -108,7 +108,7 @@ export function Header({
             {onOpenAccount && (
               <button
                 onClick={onOpenAccount}
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-emerald-600 transition-colors"
+                className="hidden h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-emerald-600 lg:flex"
                 aria-label="Account"
               >
                 <User size={19} />
@@ -168,7 +168,7 @@ export function Header({
       {/* Mobile drawer */}
       {open && (
         <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs lg:hidden">
-          <div className="fixed inset-y-0 right-0 w-full max-w-xs bg-white p-6 shadow-xl flex flex-col justify-between">
+          <div className="fixed inset-y-0 right-0 flex w-full max-w-xs flex-col justify-between overflow-y-auto bg-white p-5 shadow-xl sm:p-6">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <span className="font-display text-lg font-bold text-slate-900">{storeName}</span>
