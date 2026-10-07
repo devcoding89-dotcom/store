@@ -39,6 +39,17 @@ async function adminFetch(path: string, init: RequestInit = {}): Promise<Respons
   return res
 }
 
+async function customerFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const { data, error } = await requireSupabase().auth.getSession()
+  if (error) throw error
+  const token = data.session?.access_token
+  if (!token) throw new Error('Please sign in again to access your orders.')
+
+  const headers = new Headers(init.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  return fetch(`${API_BASE}${path}`, { ...init, headers })
+}
+
 async function getApiError(res: Response, fallback: string) {
   const body = await res.json().catch(() => null) as { error?: string } | null
   return body?.error || fallback
@@ -125,14 +136,14 @@ export async function fetchAdminStats(): Promise<AdminStats> {
 }
 
 export async function trackOrder(code: string): Promise<Order | null> {
-  const res = await fetch(`${API_BASE}/orders/track/${encodeURIComponent(code)}`)
+  const res = await customerFetch(`/orders/track/${encodeURIComponent(code)}`)
   if (res.status === 404) return null
   if (!res.ok) throw new Error('Order tracking is temporarily unavailable. Please try again.')
   return await res.json()
 }
 
 export async function createOrder(orderData: Partial<Order>): Promise<Order> {
-  const res = await fetch(`${API_BASE}/orders`, {
+  const res = await customerFetch('/orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(orderData),
@@ -144,32 +155,19 @@ export async function createOrder(orderData: Partial<Order>): Promise<Order> {
   return await res.json()
 }
 
+export async function fetchMyOrders(): Promise<Order[]> {
+  const res = await customerFetch('/orders/my')
+  if (!res.ok) throw new Error(await getApiError(res, 'Could not load your orders.'))
+  return await res.json()
+}
+
 export async function sendChatMessage(message: string, history: unknown[] = [], currentProductId?: string) {
-  const res = await fetch(`${API_BASE}/chat`, {
+  const res = await customerFetch('/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message, history, currentProductId }),
   })
   if (!res.ok) throw new Error('Chat failed')
-  return await res.json()
-}
-
-export async function paystackCheckout(orderData: {
-  customer_name: string
-  customer_phone: string
-  customer_email?: string
-  delivery_address: string
-  product_id: string
-  agreed_price: number
-  delivery_fee?: number
-  payment_reference?: string
-}) {
-  const res = await fetch(`${API_BASE}/orders/paystack-checkout`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(orderData),
-  })
-  if (!res.ok) throw new Error('Paystack checkout initialization failed')
   return await res.json()
 }
 
@@ -182,12 +180,6 @@ export async function markOrderPaid(orderId: string, paymentReference?: string) 
   if (!res.ok) throw new Error('Failed to confirm payment')
   return await res.json()
 }
-
-export async function verifyPaystackPayment(reference: string) {
-  const res = await fetch(`${API_BASE}/paystack/verify/${encodeURIComponent(reference)}`)
-  return await res.json()
-}
-
 
 export async function loginUser(email: string, password: string): Promise<User> {
   const { data, error } = await requireSupabase().auth.signInWithPassword({

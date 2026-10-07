@@ -7,20 +7,20 @@ const STEPS = [
     n: '01',
     icon: Search,
     title: 'Search or Chat with Sales Desk',
-    body: 'Type what you need or chat with the TownSquare sales desk. We will check availability and help with your order.',
+    body: 'Type what you need or chat with the SHOPLY TOWN sales desk. We will check availability and help with your order.',
     color: 'bg-emerald-50 text-emerald-600',
   },
   {
     n: '02',
     icon: Eye,
     title: 'See the Real Product',
-    body: 'Review product details and the listed price. Ask TownSquare if you need clarification before ordering.',
+    body: 'Review product details and the listed price. Ask SHOPLY TOWN if you need clarification before ordering.',
     color: 'bg-blue-50 text-blue-600',
   },
   {
     n: '03',
     icon: CreditCard,
-    title: 'Order with TownSquare',
+    title: 'Order with SHOPLY TOWN',
     body: `Discuss your price with our sales desk or pay the listed price. Submit your order and receive a code — something like ${MARKETPLACE_CONFIG.orderPrefix}-48291.`,
     color: 'bg-amber-50 text-amber-600',
   },
@@ -28,7 +28,7 @@ const STEPS = [
     n: '04',
     icon: Truck,
     title: 'Track to Your Door',
-    body: 'Follow order updates with your code. TownSquare coordinates preparation and delivery, then you can confirm receipt.',
+    body: 'Follow order updates with your code. SHOPLY TOWN coordinates preparation and delivery, then you can confirm receipt.',
     color: 'bg-purple-50 text-purple-600',
   },
 ]
@@ -46,7 +46,7 @@ export function HowItWorks() {
               From search to doorstep, <span className="text-emerald-600">four steps</span>
             </h2>
             <p className="mx-auto mt-3 max-w-lg text-base text-slate-600">
-              We've made shopping and following up with TownSquare straightforward.
+              We've made shopping and following up with SHOPLY TOWN straightforward.
             </p>
           </div>
         </Reveal>
@@ -85,7 +85,7 @@ export function HowItWorks() {
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Order updates from TownSquare
+              Order updates from SHOPLY TOWN
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />

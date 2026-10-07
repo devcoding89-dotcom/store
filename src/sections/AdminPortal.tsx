@@ -147,7 +147,7 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     try {
       if (newStatus === 'DELIVERED') {
-        await confirmOrderDelivery(orderId, undefined, 'TownSquare delivery team')
+        await confirmOrderDelivery(orderId, undefined, 'SHOPLY TOWN delivery team')
       } else {
         await updateOrderStatus(orderId, newStatus)
       }
@@ -188,7 +188,7 @@ export function AdminPortal({ onBackToShop }: { onBackToShop?: () => void }) {
       return
     }
 
-    const message = `Hello, this is TownSquare order support. Please prepare "${order.product_name}" for pickup. Agreed supplier cost: ₦${order.vendor_cost.toLocaleString()}. Our dispatch team will arrange collection. Order reference: ${order.id}.`
+    const message = `Hello, this is SHOPLY TOWN order support. Please prepare "${order.product_name}" for pickup. Agreed supplier cost: ₦${order.vendor_cost.toLocaleString()}. Our dispatch team will arrange collection. Order reference: ${order.id}.`
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
     const whatsappWindow = window.open(whatsappUrl, '_blank')
 

@@ -118,7 +118,7 @@ export function ProductPage({
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">{product.category}</span>
               <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
-                <CheckCircle2 size={14} /> Sold by TownSquare
+                <CheckCircle2 size={14} /> Sold by SHOPLY TOWN
               </span>
             </div>
             <h1 className="mt-4 font-display text-2xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-3xl">
@@ -148,7 +148,7 @@ export function ProductPage({
             ) : null}
             <div className="mt-5 space-y-2 border-t border-slate-100 pt-5 text-xs text-slate-600">
               <p className="flex items-center gap-2"><Truck size={15} className="text-emerald-700" /> Delivery charge is confirmed at checkout.</p>
-              <p className="flex items-center gap-2"><ShieldCheck size={15} className="text-emerald-700" /> TownSquare handles your order and customer support.</p>
+              <p className="flex items-center gap-2"><ShieldCheck size={15} className="text-emerald-700" /> SHOPLY TOWN handles your order and customer support.</p>
             </div>
             <div className="mt-6 grid gap-2 sm:grid-cols-2">
               <button onClick={() => onNegotiate(product)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-emerald-700 bg-white px-4 text-sm font-bold text-emerald-800 transition hover:bg-emerald-50">

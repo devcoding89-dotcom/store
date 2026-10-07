@@ -97,7 +97,7 @@ export function AINegotiatorChat({
       id: 'msg-welcome',
       role: 'assistant',
       content:
-        "Hi! I'm Amaka, TownSquare's shopping assistant. I can help with our products, prices, orders, accounts, payments, delivery, tracking, and store policies. I can’t help with unrelated topics, but I’ll do my best to give accurate TownSquare information.",
+        "Hi! I'm Amaka, SHOPLY TOWN's shopping assistant. I can help with our products, prices, orders, accounts, payments, delivery, tracking, and store policies. I can’t help with unrelated topics, but I’ll do my best to give accurate SHOPLY TOWN information.",
       time: getTimestamp(),
     },
   ])
@@ -190,7 +190,7 @@ export function AINegotiatorChat({
           payAction: {
             productId: activeProduct.id,
             productName: activeProduct.name,
-            amount: activeProduct.floor_price || activeProduct.listing_price,
+            amount: activeProduct.listing_price,
           },
         },
       ])
@@ -339,7 +339,7 @@ export function AINegotiatorChat({
 📞 *Customer WhatsApp:* ${whatsapp}
 🧾 *Order Code:* ${orderCode}
 
-💬 *Message:* Hello, I discussed this order with Amaka at TownSquare and would like to confirm it. Please confirm the details and arrange delivery to my address.`
+💬 *Message:* Hello, I discussed this order with Amaka at SHOPLY TOWN and would like to confirm it. Please confirm the details and arrange delivery to my address.`
 
       const whatsappUrl = `https://wa.me/${ownerWhatsApp}?text=${encodeURIComponent(whatsappMessage)}`
 
@@ -350,7 +350,7 @@ export function AINegotiatorChat({
         {
           id: `checkout-${Date.now()}`,
           role: 'assistant',
-          content: `✅ **Order saved!**\n\n📦 **Item:** ${itemName}\n💰 **Price:** ${agreedAmount}\n👤 **Name:** ${name}\n📍 **Address:** ${address}\n📞 **WhatsApp:** ${whatsapp}\n🧾 **Order Code:** \`${orderCode}\`\n\nYour order is saved and can now be tracked. Continue to WhatsApp to confirm the details with the TownSquare team.`,
+          content: `✅ **Order saved — payment is still pending.**\n\n📦 **Item:** ${itemName}\n💰 **Price:** ${agreedAmount}\n👤 **Name:** ${name}\n📍 **Address:** ${address}\n📞 **WhatsApp:** ${whatsapp}\n🧾 **Order Code:** \`${orderCode}\`\n\nSHOPLY TOWN does not take payment through the app or Paystack. Continue to WhatsApp to confirm the order and payment instructions with our team. Staff will manually update your payment status after confirming receipt.`,
           time: getTimestamp(),
           trackingCode: orderCode,
           whatsappUrl,
@@ -408,7 +408,7 @@ export function AINegotiatorChat({
                     Amaka is typing...
                   </span>
                 ) : (
-                  'Active now · TownSquare Concierge'
+                  'Active now · SHOPLY TOWN Concierge'
                 )}
               </p>
             </div>
@@ -578,7 +578,7 @@ export function AINegotiatorChat({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about TownSquare products, orders, or delivery..."
+              placeholder="Ask about SHOPLY TOWN products, orders, or delivery..."
               disabled={isTyping}
               className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3.5 sm:px-4 py-2.5 sm:py-3 text-base sm:text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none transition-colors font-normal"
             />
@@ -626,7 +626,7 @@ export function AINegotiatorChat({
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                Fill in your details below. We&apos;ll save your order and tracking code, then open WhatsApp so you can confirm with the TownSquare team.
+                Fill in your details below. We&apos;ll save your order and tracking code, then open WhatsApp so you can confirm with the SHOPLY TOWN team.
               </p>
 
               {formError && (

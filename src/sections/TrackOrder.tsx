@@ -35,7 +35,7 @@ function buildTimeline(order: Order): Step[] {
     },
     {
       label: 'Payment Received',
-      time: isPaid ? 'Payment confirmed by the store' : 'Payment has not been confirmed yet',
+      time: isPaid ? 'Payment manually confirmed by SHOPLY TOWN' : 'Payment has not been confirmed yet',
       done: isPaid,
       current: !isPaid,
     },
@@ -180,8 +180,7 @@ export function TrackOrder({ prefill }: { prefill: string }) {
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  Recipient: <strong className="text-slate-800">{order.customer_name}</strong> ·{' '}
-                  {order.delivery_address}
+                  Delivery details are private. Sign in to view this order in My Orders.
                 </p>
               </div>
 

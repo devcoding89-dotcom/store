@@ -12,7 +12,7 @@ export function Header({
   onOpenCart,
   onOpenAccount,
   onOpenOrders,
-  storeName = 'TownSquare',
+  storeName = 'SHOPLY TOWN',
   searchQuery = '',
   onSearch,
 }: {
@@ -55,7 +55,7 @@ export function Header({
           {/* Logo */}
           <a href="#top" className="flex items-center gap-2.5 shrink-0 group">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-sm group-hover:bg-emerald-700 transition-colors">
-              T
+              S
             </div>
             <div>
               <span className="font-display text-xl font-bold tracking-tight text-slate-900 leading-none block">

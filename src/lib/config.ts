@@ -1,5 +1,5 @@
 export const MARKETPLACE_CONFIG = {
-  name: 'TownSquare',
+  name: 'SHOPLY TOWN',
   tagline: 'One market. Every corner of the city.',
   orderPrefix: 'ORD',
   currency: '₦',
@@ -12,7 +12,7 @@ export const MARKETPLACE_CONFIG = {
   },
   support: {
     phone: '+234 800 000 0000',
-    whatsapp: 'https://wa.me/2348000000000?text=Hello%2C%20I%20want%20to%20list%20my%20shop%20on%20TownSquare',
+    whatsapp: 'https://wa.me/2348000000000?text=Hello%2C%20I%20want%20to%20list%20my%20shop%20on%20SHOPLY TOWN',
     email: 'hello@townsquare.market',
   },
   deliveryZones: [

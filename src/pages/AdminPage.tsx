@@ -36,7 +36,7 @@ export function AdminPage() {
     return (
       <main className="min-h-screen bg-white">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-slate-900 px-4 py-3 text-white shadow-sm">
-          <h1 className="font-display text-lg font-semibold">TownSquare Admin</h1>
+          <h1 className="font-display text-lg font-semibold">SHOPLY TOWN Admin</h1>
           <button onClick={leaveAdmin} className="text-sm font-medium text-slate-300 transition-colors hover:text-white">
             Sign out
           </button>
@@ -57,7 +57,7 @@ export function AdminPage() {
         </div>
         <p className="mt-6 text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-700">Private access</p>
         <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight">Admin sign in</h1>
-        <p className="mt-3 text-sm leading-6 text-slate-600">Enter the admin password to manage TownSquare orders and products.</p>
+        <p className="mt-3 text-sm leading-6 text-slate-600">Enter the admin password to manage SHOPLY TOWN orders and products.</p>
 
         <form onSubmit={handleLogin} className="mt-7 space-y-4">
           <label htmlFor="admin-password" className="block text-sm font-bold text-slate-700">Admin password</label>

@@ -11,9 +11,66 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 3001
 
+const PRIVATE_PRODUCT_FIELDS = new Set([
+  'vendor_cost',
+  'floor_price',
+  'vendor_phone',
+  'vendor_name',
+  'vendor_stall_location',
+])
+
+function toPublicProduct(product) {
+  return {
+    ...Object.fromEntries(Object.entries(product).filter(([key]) => !PRIVATE_PRODUCT_FIELDS.has(key))),
+    vendor_name: 'SHOPLY TOWN',
+    vendor_stall_location: 'Online store',
+  }
+}
+
 app.use(cors())
 app.use(express.json({ limit: '25mb' }))
 app.use(express.urlencoded({ extended: true, limit: '25mb' }))
+
+async function requireCustomer(req, res, next) {
+  const authorization = req.get('authorization') || ''
+  const [scheme, token] = authorization.split(' ')
+  if (scheme !== 'Bearer' || !token) {
+    return res.status(401).json({ error: 'Customer sign-in required.' })
+  }
+
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data.user) {
+    return res.status(401).json({ error: 'Your session is invalid or expired. Please sign in again.' })
+  }
+  req.customer = data.user
+  return next()
+}
+
+function toCustomerOrder(order) {
+  return {
+    id: order.id,
+    customer_id: order.customer_id,
+    customer_name: order.customer_name,
+    customer_phone: order.customer_phone,
+    customer_email: order.customer_email,
+    delivery_address: order.delivery_address,
+    delivery_zone: order.delivery_zone,
+    product_id: order.product_id,
+    product_name: order.product_name,
+    items: order.items,
+    agreed_price: order.agreed_price,
+    delivery_fee: order.delivery_fee,
+    total_amount: order.total_amount,
+    payment_status: order.payment_status,
+    payment_reference: order.payment_reference,
+    payment_verified_at: order.payment_verified_at,
+    delivery_signature: order.delivery_signature,
+    delivered_at: order.delivered_at,
+    delivered_by: order.delivered_by,
+    status: order.status,
+    created_at: order.created_at,
+  }
+}
 
 const adminLoginAttempts = new Map()
 const ADMIN_LOGIN_WINDOW_MS = 15 * 60 * 1000
@@ -71,19 +128,7 @@ app.get('/api/products', async (req, res) => {
   }
 
   // Keep supplier contacts and internal cost/margin details server-side.
-  const supplierFields = new Set([
-    'vendor_cost',
-    'floor_price',
-    'vendor_phone',
-    'vendor_name',
-    'vendor_stall_location',
-  ])
-  const safeProducts = products.map((product) => ({
-    ...Object.fromEntries(Object.entries(product).filter(([key]) => !supplierFields.has(key))),
-    vendor_name: 'TownSquare Marketplace',
-    vendor_stall_location: 'Online store',
-  }))
-  res.json(safeProducts)
+  res.json(products.map(toPublicProduct))
   } catch (error) {
     console.error('Failed to load storefront products:', error)
     res.status(503).json({ error: 'Products are temporarily unavailable. Please try again.' })
@@ -163,12 +208,15 @@ app.get('/api/admin/orders', async (req, res) => {
   }
 })
 
+app.all(['/api/orders/paystack-checkout', '/api/paystack/verify/:reference'], (_req, res) => {
+  res.status(410).json({ error: 'Online payments are not available. Place your order and confirm payment via WhatsApp.' })
+})
+
 // Customer's personal orders
-app.get('/api/orders/my', async (req, res) => {
-  const customerId = req.query.customer_id
-  if (!customerId) return res.json([])
+app.get('/api/orders/my', requireCustomer, async (req, res) => {
   try {
-    res.json(await db.getOrdersByCustomer(customerId))
+    const orders = await db.getOrdersByCustomer(req.customer.id)
+    res.json(orders.map(toCustomerOrder))
   } catch (error) {
     console.error('Failed to load customer orders:', error)
     res.status(500).json({ error: 'Could not load customer orders.' })
@@ -176,26 +224,22 @@ app.get('/api/orders/my', async (req, res) => {
 })
 
 // Public tracking lookup
-app.get('/api/orders/track/:code', async (req, res) => {
+app.get('/api/orders/track/:code', requireCustomer, async (req, res) => {
   try {
     const order = await db.getOrderById(req.params.code.trim().toUpperCase())
-    if (!order) return res.status(404).json({ error: 'Order not found' })
+    if (!order || order.customer_id !== req.customer.id) {
+      return res.status(404).json({ error: 'Order not found' })
+    }
     res.json({
       id: order.id,
-      customer_name: order.customer_name,
-      customer_phone: order.customer_phone,
       product_name: order.product_name,
       agreed_price: order.agreed_price,
       delivery_fee: order.delivery_fee,
       total_amount: order.total_amount,
-      delivery_address: order.delivery_address,
-      delivery_zone: order.delivery_zone,
       payment_status: order.payment_status,
-      payment_verified_at: order.payment_verified_at,
       status: order.status,
-      delivery_signature: order.delivery_signature,
+      fulfillment_status: order.fulfillment_status,
       delivered_at: order.delivered_at,
-      delivered_by: order.delivered_by,
       created_at: order.created_at,
     })
   } catch (error) {
@@ -230,41 +274,65 @@ app.post('/api/orders/:id/deliver', requireAdmin, async (req, res) => {
 })
 
 // Create order (from checkout or AI chat)
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', requireCustomer, async (req, res) => {
   const {
     customer_name,
     customer_phone,
-    customer_email,
     delivery_address,
     product_id,
     items,
     agreed_price,
-    delivery_fee,
     delivery_zone,
-    customer_id,
-  } = req.body
+  } = req.body || {}
 
-  if (!customer_name || !customer_phone || (!product_id && !Array.isArray(items))) {
-    return res.status(400).json({ error: 'Missing required order fields' })
+  if (
+    typeof customer_name !== 'string' || !customer_name.trim() || customer_name.length > 120 ||
+    typeof customer_phone !== 'string' || !customer_phone.trim() || customer_phone.length > 40 ||
+    typeof delivery_address !== 'string' || !delivery_address.trim() || delivery_address.length > 500 ||
+    (!product_id && !Array.isArray(items)) ||
+    (product_id !== undefined && typeof product_id !== 'string') ||
+    (Array.isArray(items) && (
+      items.length < 1 ||
+      items.length > 20 ||
+      items.some((item) =>
+        !item ||
+        typeof item.product_id !== 'string' ||
+        !Number.isInteger(Number(item.quantity)) ||
+        Number(item.quantity) < 1 ||
+        Number(item.quantity) > 99
+      )
+    ))
+  ) {
+    return res.status(400).json({ error: 'Name, phone, delivery address, and at least one product are required.' })
   }
 
   try {
+    await db.syncFromSupabase()
     const order = await db.createOrder({
-      customer_id,
-      customer_name,
-      customer_phone,
-      customer_email,
-      delivery_address: delivery_address || 'Central District Landmark',
-      delivery_zone,
+      customer_id: req.customer.id,
+      customer_name: customer_name.trim(),
+      customer_phone: customer_phone.trim(),
+      whatsapp_number: customer_phone.trim(),
+      customer_email: req.customer.email || '',
+      delivery_address: delivery_address.trim(),
+      delivery_zone: delivery_zone === 'Zone 2 (Inner Ring / Suburbs)' ||
+        delivery_zone === 'Zone 3 (Outer Districts)' ||
+        delivery_zone === 'Zone 4 (Inter-city Express)'
+        ? delivery_zone
+        : 'Zone 1 (Central / Commercial Core)',
       product_id,
       items,
       agreed_price,
-      delivery_fee,
+      payment_status: 'PENDING',
+      status: 'PENDING',
+      payment_reference: '',
     })
-    res.status(201).json(order)
+    res.status(201).json(toCustomerOrder(order))
   } catch (error) {
     console.error('Failed to save new order:', error)
-    res.status(500).json({ error: 'Order could not be saved. Please try again.' })
+    res.status(error.statusCode || 500).json({
+      error: error.statusCode ? error.message : 'Order could not be saved. Please try again.',
+    })
   }
 })
 
@@ -401,18 +469,40 @@ app.patch('/api/admin/orders/:id/status', async (req, res) => {
 
 
 // --- AI CHAT & NEGOTIATION ENDPOINT ---
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', requireCustomer, async (req, res) => {
   try {
-    const { message, history, currentProductId } = req.body
-    if (!message) return res.status(400).json({ error: 'Message is required' })
+    const { message, history, currentProductId } = req.body || {}
+    if (typeof message !== 'string' || !message.trim() || message.length > 4000) {
+      return res.status(400).json({ error: 'A message of 1–4000 characters is required.' })
+    }
+    if (
+      history !== undefined &&
+      (!Array.isArray(history) ||
+        history.length > 20 ||
+        history.some((entry) =>
+          !entry ||
+          !['user', 'assistant'].includes(entry.role) ||
+          typeof entry.content !== 'string' ||
+          entry.content.length > 4000
+        ))
+    ) {
+      return res.status(400).json({ error: 'Chat history is invalid or too large.' })
+    }
 
     await db.syncFromSupabase()
     const result = await processChat({ message, history, currentProductId })
-    res.json(result)
+    res.json({
+      ...result,
+      products: result.products?.map(toPublicProduct),
+    })
   } catch (err) {
     console.error('Chat error:', err)
     res.status(500).json({ error: 'Internal chat error' })
   }
+})
+
+app.all(['/api/auth/login', '/api/auth/register'], (_req, res) => {
+  res.status(410).json({ error: 'Use the SHOPLY TOWN Supabase sign-in page.' })
 })
 
 // --- AUTH & ACCOUNTS ---
@@ -461,7 +551,7 @@ app.get('/api/admin/stats', async (req, res) => {
 
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
-    console.log(`TownSquare Marketplace Backend running on port ${PORT}`)
+    console.log(`SHOPLY TOWN Marketplace Backend running on port ${PORT}`)
   })
 }
 

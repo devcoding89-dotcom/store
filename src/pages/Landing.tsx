@@ -13,7 +13,7 @@ const benefits = [
   {
     icon: BadgeCheck,
     title: 'One place to shop',
-    description: 'Browse a growing selection and place orders through TownSquare.',
+    description: 'Browse a growing selection and place orders through SHOPLY TOWN.',
   },
   {
     icon: Sparkles,
@@ -48,11 +48,11 @@ const shoppingFeatures = [
 const faqs = [
   {
     question: 'Do I need an account to browse the marketplace?',
-    answer: 'Yes. Create an account or sign in first; the TownSquare store is available to signed-in customers.',
+    answer: 'Yes. Create an account or sign in first; the SHOPLY TOWN store is available to signed-in customers.',
   },
   {
     question: 'What do I need to create an account?',
-    answer: 'Use an email address and password, and provide your name and delivery phone number. You can also add an address for easier TownSquare checkout.',
+    answer: 'Use an email address and password, and provide your name and delivery phone number. You can also add an address for easier SHOPLY TOWN checkout.',
   },
   {
     question: 'Why am I being asked to confirm my email?',
@@ -60,15 +60,19 @@ const faqs = [
   },
   {
     question: 'Can I ask about a product or price?',
-    answer: 'Yes. Once you sign in, use the TownSquare chat to ask questions or discuss an item with our sales desk.',
+    answer: 'Yes. Once you sign in, use the SHOPLY TOWN chat to ask questions or discuss an item with our sales desk.',
   },
   {
     question: 'How do I check an order?',
     answer: 'Sign in and open your account to see orders associated with your account. You can also use an order tracking code when one has been provided.',
   },
   {
+    question: 'Can I pay through Paystack or inside the app?',
+    answer: 'No. SHOPLY TOWN does not collect payments through Paystack or inside the app. Confirm your order and payment instructions with staff in WhatsApp. Your order stays unpaid until staff manually confirms receiving payment.',
+  },
+  {
     question: 'Can I get a refund or replacement?',
-    answer: 'TownSquare does not offer cash refunds under its policy. If an order arrives damaged or incorrect, report it within 48 hours after delivery. If it is not delivered, report it within 48 hours after the expected delivery date TownSquare gave you. Verified issues may qualify for a replacement of the same product, subject to availability. Change of mind does not qualify.',
+    answer: 'SHOPLY TOWN does not offer cash refunds under its policy. If an order arrives damaged or incorrect, report it within 48 hours after delivery. If it is not delivered, report it within 48 hours after the expected delivery date SHOPLY TOWN gave you. Verified issues may qualify for a replacement of the same product, subject to availability. Change of mind does not qualify.',
   },
 ]
 
@@ -86,16 +90,16 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
   return (
     <div className="min-h-screen overflow-hidden bg-[#f8faf8] text-slate-950">
       <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
-        <a href="#top" className="flex items-center gap-3" aria-label="TownSquare Marketplace home">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-700 text-xl font-extrabold text-white shadow-lg shadow-emerald-900/15">T</span>
+        <a href="#top" className="flex items-center gap-3" aria-label="SHOPLY TOWN Marketplace home">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-700 text-xl font-extrabold text-white shadow-lg shadow-emerald-900/15">S</span>
           <span>
-            <span className="block font-display text-lg font-extrabold leading-tight tracking-tight">TownSquare</span>
+            <span className="block font-display text-lg font-extrabold leading-tight tracking-tight">SHOPLY TOWN</span>
             <span className="block text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-700">Marketplace</span>
           </span>
         </a>
 
         <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-600 md:flex">
-          <a href="#why-townsquare" className="transition hover:text-emerald-700">Why TownSquare</a>
+          <a href="#why-townsquare" className="transition hover:text-emerald-700">Why SHOPLY TOWN</a>
           <a href="#categories" className="transition hover:text-emerald-700">Categories</a>
           <a href="#how-it-works" className="transition hover:text-emerald-700">How it works</a>
           <a href="#faq" className="transition hover:text-emerald-700">FAQ</a>
@@ -120,7 +124,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
         </button>
         {menuOpen && (
           <div className="absolute left-4 right-4 top-[calc(100%-0.5rem)] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl sm:hidden">
-            <a href="#why-townsquare" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Why TownSquare</a>
+            <a href="#why-townsquare" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Why SHOPLY TOWN</a>
             <a href="#categories" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">Categories</a>
             <a href="#how-it-works" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">How it works</a>
             <a href="#faq" onClick={() => setMenuOpen(false)} className="block rounded-lg px-3 py-3 text-sm font-semibold text-slate-700">FAQ</a>
@@ -147,7 +151,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
               Right around you.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
-              Discover everyday essentials with TownSquare, ask questions, bargain with Amaka, and keep your orders together in one simple store.
+              Discover everyday essentials with SHOPLY TOWN, ask questions, bargain with Amaka, and keep your orders together in one simple store.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button onClick={() => openAuth(true)} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-full bg-emerald-700 px-7 text-sm font-bold text-white shadow-xl shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-emerald-800">
@@ -185,14 +189,14 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
                       <span className="h-6 w-6 rounded-full border-2 border-white bg-rose-300" />
                       <span className="h-6 w-6 rounded-full border-2 border-white bg-sky-300" />
                     </span>
-                    TownSquare shopping, made simple
+                    SHOPLY TOWN shopping, made simple
                   </div>
                 </div>
               </div>
             </div>
             <div className="absolute -left-3 top-8 hidden items-center gap-3 rounded-2xl border border-white bg-white px-4 py-3 shadow-xl sm:flex lg:-left-12">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800"><BadgeCheck size={20} /></span>
-              <span><span className="block text-sm font-extrabold">TownSquare support</span><span className="text-xs text-slate-500">Help with your order</span></span>
+              <span><span className="block text-sm font-extrabold">SHOPLY TOWN support</span><span className="text-xs text-slate-500">Help with your order</span></span>
             </div>
           </div>
         </section>
@@ -248,7 +252,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             <div>
               <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-700">Made for the way you shop</p>
               <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">From finding it to following up.</h2>
-              <p className="mt-4 max-w-md leading-7 text-slate-600">TownSquare brings product discovery, helpful conversations, and order information into one marketplace experience.</p>
+              <p className="mt-4 max-w-md leading-7 text-slate-600">SHOPLY TOWN brings product discovery, helpful conversations, and order information into one marketplace experience.</p>
               <button onClick={() => openAuth(true)} className="mt-6 inline-flex items-center gap-2 rounded-full bg-emerald-700 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-800">
                 Get started <ArrowRight size={16} />
               </button>
@@ -272,13 +276,13 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-700">Easy as 1, 2, 3</p>
             <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">Your next good find is close.</h2>
             <button onClick={() => openAuth(true)} className="mt-6 inline-flex items-center gap-2 rounded-full bg-slate-950 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-emerald-800">
-              Join TownSquare <ArrowRight size={16} />
+              Join SHOPLY TOWN <ArrowRight size={16} />
             </button>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {[
               ['01', 'Create your account', 'A quick sign-up gets you into the marketplace.'],
-              ['02', 'Explore the collection', 'Browse products and chat with TownSquare.'],
+              ['02', 'Explore the collection', 'Browse products and chat with SHOPLY TOWN.'],
               ['03', 'Order with confidence', 'Keep your delivery details and orders together.'],
             ].map(([number, title, description]) => (
               <div key={number} className="rounded-2xl border border-slate-200 bg-white p-5">
@@ -337,7 +341,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
             <div className="max-w-2xl">
               <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-emerald-300">Ready when you are</p>
               <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">Your next local find is waiting.</h2>
-              <p className="mt-3 leading-7 text-emerald-100/80">Create an account to step inside TownSquare Marketplace.</p>
+              <p className="mt-3 leading-7 text-emerald-100/80">Create an account to step inside SHOPLY TOWN Marketplace.</p>
             </div>
             <button onClick={() => openAuth(true)} className="inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-100">
               Create your account <ArrowRight size={17} />
@@ -348,7 +352,7 @@ export default function Landing({ onLoginSuccess }: LandingProps) {
 
       <footer className="border-t border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-5 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
-          <span>© {new Date().getFullYear()} TownSquare Marketplace</span>
+          <span>© {new Date().getFullYear()} SHOPLY TOWN Marketplace</span>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <a href="/terms" className="font-semibold hover:text-emerald-800">Terms</a>
             <a href="/returns" className="font-semibold hover:text-emerald-800">Returns</a>

@@ -107,17 +107,17 @@ export function ProductDetailModal({
               <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs">
                 <div className="flex items-center gap-1.5 font-bold text-slate-800">
                   <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
-                  <span>Sold by TownSquare</span>
+                  <span>Sold by SHOPLY TOWN</span>
                 </div>
                 <p className="mt-1 text-slate-500 pl-5 text-[11px]">
-                  TownSquare handles your order and customer support.
+                  SHOPLY TOWN handles your order and customer support.
                 </p>
               </div>
 
               {/* Description */}
               <p className="mt-4 text-sm text-slate-600 leading-relaxed font-normal">
                 {product.description ||
-                  'Product details and order support are provided by TownSquare. Contact us if you need more information before ordering.'}
+                  'Product details and order support are provided by SHOPLY TOWN. Contact us if you need more information before ordering.'}
               </p>
 
               {/* Features List */}

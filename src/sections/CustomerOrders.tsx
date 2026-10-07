@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Package, Receipt, RefreshCw, X } from 'lucide-react'
 import { formatNaira } from '@/lib/catalog'
+import { fetchMyOrders } from '@/lib/api'
 import type { Order, User } from '@/types/marketplace'
 
 type CustomerOrdersProps = {
@@ -19,16 +20,14 @@ export function CustomerOrders({ currentUser, onTrackOrder, onClose }: CustomerO
     setLoading(true)
     setError('')
     try {
-      const response = await fetch(`/api/orders/my?customer_id=${encodeURIComponent(currentUser.id)}`)
-      if (!response.ok) throw new Error('Could not load your orders. Please try again.')
-      setOrders(await response.json() as Order[])
+      setOrders(await fetchMyOrders())
     } catch (loadError) {
       console.error('Failed to load customer orders:', loadError)
       setError(loadError instanceof Error ? loadError.message : 'Could not load your orders.')
     } finally {
       setLoading(false)
     }
-  }, [currentUser.id])
+  }, [])
 
   useEffect(() => {
     void loadOrders()
@@ -109,7 +108,7 @@ export function CustomerOrders({ currentUser, onTrackOrder, onClose }: CustomerO
                   <p className="mt-2 font-display text-sm font-semibold">{order.product_name}</p>
                   <div className="mt-2 flex items-center justify-between gap-2 text-xs">
                     <span className={`font-semibold ${isPaid ? 'text-emerald-700' : 'text-amber-700'}`}>
-                      {isPaid ? 'Payment verified' : 'Payment pending'}
+                      {isPaid ? 'Payment confirmed by SHOPLY TOWN' : 'Payment pending'}
                     </span>
                     {isPaid && (
                       <button
@@ -127,13 +126,13 @@ export function CustomerOrders({ currentUser, onTrackOrder, onClose }: CustomerO
                   {receiptOpen && isPaid && (
                     <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-xs">
                       <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
-                        <span className="font-bold uppercase tracking-wide text-emerald-900">TownSquare payment receipt</span>
-                        <span className="text-[10px] font-semibold text-emerald-800">VERIFIED</span>
+                        <span className="font-bold uppercase tracking-wide text-emerald-900">SHOPLY TOWN payment receipt</span>
+                        <span className="text-[10px] font-semibold text-emerald-800">MANUALLY CONFIRMED</span>
                       </div>
                       <div className="mt-2 space-y-1.5 text-slate-700">
                         <p>Receipt / order code: <strong className="font-mono">{order.payment_reference || order.id}</strong></p>
                         <p>Paid by: <strong>{order.customer_name}</strong></p>
-                        <p>Verified: <strong>{order.payment_verified_at ? new Date(order.payment_verified_at).toLocaleString() : 'Confirmed by TownSquare'}</strong></p>
+                        <p>Confirmed: <strong>{order.payment_verified_at ? new Date(order.payment_verified_at).toLocaleString() : 'Confirmed by SHOPLY TOWN'}</strong></p>
                         <div className="border-t border-emerald-200 pt-2">
                           {items.map((item, index) => (
                             <div key={`${item.product_id}-${index}`} className="flex justify-between gap-3 py-0.5">
@@ -147,7 +146,7 @@ export function CustomerOrders({ currentUser, onTrackOrder, onClose }: CustomerO
                           </div>
                         </div>
                       </div>
-                      <p className="mt-2 text-[10px] text-emerald-900">This verified receipt remains saved as your order record.</p>
+                      <p className="mt-2 text-[10px] text-emerald-900">This record confirms that SHOPLY TOWN staff marked the payment received.</p>
                     </div>
                   )}
 

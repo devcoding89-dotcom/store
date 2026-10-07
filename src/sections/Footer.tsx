@@ -61,12 +61,12 @@ export function Footer() {
         <div>
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-sm">
-              T
+              S
             </div>
             <span className="font-display text-xl font-bold">{MARKETPLACE_CONFIG.name}</span>
           </div>
           <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-400">
-            Shop through TownSquare and get help with your orders from one place.
+            Shop through SHOPLY TOWN and get help with your orders from one place.
           </p>
           <div className="mt-4 flex gap-3">
             <a href="#" className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:bg-emerald-600 hover:text-white transition-colors">

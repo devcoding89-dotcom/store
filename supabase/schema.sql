@@ -1,5 +1,5 @@
 -- ========================================================
--- TOWNSQUARE MARKETPLACE - SUPABASE DATABASE SCHEMA & MIGRATION
+-- SHOPLY TOWN - SUPABASE DATABASE SCHEMA & MIGRATION
 -- Project URL: https://luxoncvjroafxvsylhjh.supabase.co
 -- ========================================================
 
@@ -103,16 +103,22 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- 5. ENABLE ROW LEVEL SECURITY (RLS) POLICIES
--- Allow public to read in-stock products
+-- Product reads and writes go through the server so internal prices and
+-- supplier fields are never exposed through the browser Supabase API.
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 
-DO $$ 
+REVOKE ALL ON TABLE public.products FROM PUBLIC, anon, authenticated;
+
+DO $$
+DECLARE
+  existing_policy RECORD;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'products' AND policyname = 'Public products read access'
-  ) THEN
-    CREATE POLICY "Public products read access" ON products FOR SELECT USING (true);
-  END IF;
+  FOR existing_policy IN
+    SELECT policyname FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'products'
+  LOOP
+    EXECUTE format('DROP POLICY %I ON public.products', existing_policy.policyname);
+  END LOOP;
 END $$;
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
@@ -127,22 +133,22 @@ BEGIN
   END IF;
 END $$;
 
--- Allow public to track their own orders
+-- Orders are only accessed through the server using its service role.
+-- Never expose customer order rows through the browser Supabase API.
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
-DO $$ 
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'orders' AND policyname = 'Allow insert orders'
-  ) THEN
-    CREATE POLICY "Allow insert orders" ON orders FOR INSERT WITH CHECK (true);
-  END IF;
+REVOKE ALL ON TABLE public.orders FROM PUBLIC, anon, authenticated;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies WHERE tablename = 'orders' AND policyname = 'Allow select orders'
-  ) THEN
-    CREATE POLICY "Allow select orders" ON orders FOR SELECT USING (true);
-  END IF;
+DO $$
+DECLARE
+  existing_policy RECORD;
+BEGIN
+  FOR existing_policy IN
+    SELECT policyname FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'orders'
+  LOOP
+    EXECUTE format('DROP POLICY %I ON public.orders', existing_policy.policyname);
+  END LOOP;
 END $$;
 
 -- 6. UNLOCK ANY CATEGORY (Books, Phones, Fashion, etc.)

@@ -7,9 +7,9 @@ export type PublicInfoPage = 'terms' | 'returns' | 'faq'
 
 const termsSections = [
   {
-    title: '1. About TownSquare',
+    title: '1. About SHOPLY TOWN',
     paragraphs: [
-      'TownSquare is the retailer for orders placed through this store and is your point of contact for payment, order support, returns, and delivery. We may source or dispatch products with the help of fulfillment partners. TownSquare does not claim to manufacture products unless a listing explicitly says so; product brand and manufacturer details should be checked on the listing or packaging.',
+      'SHOPLY TOWN is the retailer for orders placed through this store and is your point of contact for payment, order support, returns, and delivery. We may source or dispatch products with the help of fulfillment partners. SHOPLY TOWN does not claim to manufacture products unless a listing explicitly says so; product brand and manufacturer details should be checked on the listing or packaging.',
       'The store’s legal business name, registered address, and support contact should be added here before these terms are treated as final.',
     ],
   },
@@ -30,9 +30,9 @@ const termsSections = [
   {
     title: '4. Orders, payment, delivery, and replacements',
     paragraphs: [
-      'An order request is subject to availability and TownSquare confirmation. TownSquare should confirm the final item, total amount, delivery destination, estimated delivery arrangement, and payment instructions with you.',
+      'An order request is subject to availability and SHOPLY TOWN confirmation. SHOPLY TOWN should confirm the final item, total amount, delivery destination, estimated delivery arrangement, and payment instructions with you.',
       'Delivery estimates are estimates, not guaranteed arrival times. You are responsible for providing a complete address and reachable phone number. The store should be contacted promptly if delivery details need to change.',
-      'For verified damaged, incorrect, or undelivered orders reported within the Returns & Replacements policy window, TownSquare provides a replacement of the same product. TownSquare does not provide cash refunds under this policy. This does not limit consumer rights that cannot legally be excluded.',
+      'For verified damaged, incorrect, or undelivered orders reported within the Returns & Replacements policy window, SHOPLY TOWN provides a replacement of the same product. SHOPLY TOWN does not provide cash refunds under this policy. This does not limit consumer rights that cannot legally be excluded.',
     ],
   },
   {
@@ -60,20 +60,20 @@ const returnSections = [
   {
     title: 'When a replacement may be requested',
     paragraphs: [
-      'TownSquare accepts replacement requests only for an order that was delivered damaged or faulty, contained an item different from the one ordered, or was not delivered by the expected delivery date TownSquare gave you. A change of mind, or a size or colour preference when the correct item was delivered, does not qualify.',
-      'Contact TownSquare within 48 hours after delivery for a damaged, faulty, or incorrect item. For an undelivered order, contact TownSquare within 48 hours after the expected delivery date. Include your order code, a description of the issue, and clear photos when relevant.',
+      'SHOPLY TOWN accepts replacement requests only for an order that was delivered damaged or faulty, contained an item different from the one ordered, or was not delivered by the expected delivery date SHOPLY TOWN gave you. A change of mind, or a size or colour preference when the correct item was delivered, does not qualify.',
+      'Contact SHOPLY TOWN within 48 hours after delivery for a damaged, faulty, or incorrect item. For an undelivered order, contact SHOPLY TOWN within 48 hours after the expected delivery date. Include your order code, a description of the issue, and clear photos when relevant.',
     ],
   },
   {
     title: 'What happens after you contact us',
     paragraphs: [
-      'TownSquare will review the order and the reported issue. Do not send an item back before TownSquare has reviewed your request and provided return or inspection instructions. Keep the item and its packaging until you hear from us.',
+      'SHOPLY TOWN will review the order and the reported issue. Do not send an item back before SHOPLY TOWN has reviewed your request and provided return or inspection instructions. Keep the item and its packaging until you hear from us.',
     ],
   },
   {
     title: 'Replacement only — no cash refunds',
     paragraphs: [
-      'If TownSquare verifies that the request qualifies, the remedy is a replacement of the same product, subject to availability. TownSquare does not issue cash refunds under this policy. If the same product is unavailable, contact TownSquare to discuss the order. This policy does not limit consumer rights that cannot legally be excluded.',
+      'If SHOPLY TOWN verifies that the request qualifies, the remedy is a replacement of the same product, subject to availability. SHOPLY TOWN does not issue cash refunds under this policy. If the same product is unavailable, contact SHOPLY TOWN to discuss the order. This policy does not limit consumer rights that cannot legally be excluded.',
     ],
   },
 ]
@@ -89,15 +89,15 @@ const faqItems = [
   },
   {
     question: 'How do I find products?',
-    answer: 'After signing in, browse categories or search products. TownSquare is your retailer and order contact; availability and product details may change, so ask TownSquare to confirm important details before ordering.',
+    answer: 'After signing in, browse categories or search products. SHOPLY TOWN is your retailer and order contact; availability and product details may change, so ask SHOPLY TOWN to confirm important details before ordering.',
   },
   {
     question: 'How do I place an order?',
-    answer: 'Add products to your cart or discuss an item with Amaka. Enter your name, delivery address, and contact number at checkout. TownSquare saves an order code and opens WhatsApp so you can confirm the details with our team. Fulfillment partners may help prepare or deliver some orders.',
+    answer: 'Add products to your cart or discuss an item with Amaka. Enter your name, delivery address, and contact number at checkout. SHOPLY TOWN saves an order code and opens WhatsApp so you can confirm the details with our team. Fulfillment partners may help prepare or deliver some orders.',
   },
   {
     question: 'Who is responsible for my order?',
-    answer: 'TownSquare is the retailer and your contact for payment, order support, returns, and delivery. Fulfillment partners may help prepare or dispatch products, but you place and manage your order through TownSquare.',
+    answer: 'SHOPLY TOWN is the retailer and your contact for payment, order support, returns, and delivery. Fulfillment partners may help prepare or dispatch products, but you place and manage your order through SHOPLY TOWN.',
   },
   {
     question: 'How do I track an order?',
@@ -108,8 +108,12 @@ const faqItems = [
     answer: 'The current checkout flow uses WhatsApp for the customer and store to confirm order details. Your app creates the order record first so the order code can be looked up.',
   },
   {
+    question: 'Can I pay through Paystack or inside the app?',
+    answer: 'No. SHOPLY TOWN does not collect payments through Paystack or inside the app. Submit your order, confirm the details with staff in WhatsApp, and only follow payment instructions confirmed by SHOPLY TOWN. Your order stays unpaid until staff manually confirms receiving payment.',
+  },
+  {
     question: 'Can I get a refund or replacement?',
-    answer: 'TownSquare does not issue cash refunds under its policy. For a damaged, faulty, or incorrect item, contact TownSquare within 48 hours after delivery. For an undelivered order, contact TownSquare within 48 hours after the expected delivery date TownSquare gave you. If the issue is verified, the remedy is a replacement of the same product, subject to availability. Include your order code and do not send an item back until you receive instructions. Consumer rights that cannot legally be excluded are not affected.',
+    answer: 'SHOPLY TOWN does not issue cash refunds under its policy. For a damaged, faulty, or incorrect item, contact SHOPLY TOWN within 48 hours after delivery. For an undelivered order, contact SHOPLY TOWN within 48 hours after the expected delivery date SHOPLY TOWN gave you. If the issue is verified, the remedy is a replacement of the same product, subject to availability. Include your order code and do not send an item back until you receive instructions. Consumer rights that cannot legally be excluded are not affected.',
   },
   {
     question: 'Can I return an item because I changed my mind?',
@@ -125,7 +129,7 @@ const pageDetails = {
   terms: {
     eyebrow: 'The important details',
     title: 'Terms & Conditions',
-    description: 'The ground rules for using TownSquare Marketplace.',
+    description: 'The ground rules for using SHOPLY TOWN Marketplace.',
     icon: FileText,
     sections: termsSections,
   },
@@ -189,7 +193,7 @@ export function PublicInfo({ page }: { page: PublicInfoPage }) {
       <div className={`mt-8 flex gap-3 rounded-2xl border p-4 ${isTerms ? 'border-blue-200 bg-blue-50 text-blue-950' : 'border-emerald-200 bg-emerald-50 text-emerald-950'}`}>
         {isTerms ? <FileText className="mt-0.5 shrink-0" size={19} /> : <ShieldCheck className="mt-0.5 shrink-0" size={19} />}
         <p className="text-sm leading-6">
-          <strong>{isTerms ? 'Terms information.' : 'TownSquare policy: replacement only; no cash refunds.'}</strong>{' '}
+          <strong>{isTerms ? 'Terms information.' : 'SHOPLY TOWN policy: replacement only; no cash refunds.'}</strong>{' '}
           {isTerms
             ? 'This general template is not legal advice. Add your verified business identity, contact details, applicable local requirements, and have the final text reviewed.'
             : 'Report damaged, faulty, or incorrect items within 48 hours after delivery; report non-delivery within 48 hours after the expected delivery date. Read the rules below; consumer rights that cannot legally be excluded are not affected.'}
@@ -225,7 +229,7 @@ function InfoLayout({ children }: { children: ReactNode }) {
     <main className="min-h-screen bg-[#f8faf8] px-4 py-6 text-slate-950 sm:px-8 sm:py-10">
       <div className="mx-auto max-w-4xl">
         <Link to="/" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-800">
-          <ArrowLeft size={16} /> Back to TownSquare
+          <ArrowLeft size={16} /> Back to SHOPLY TOWN
         </Link>
         <article className="mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:mt-8 sm:p-10 lg:p-12">
           {children}

@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { randomBytes } from 'node:crypto'
 import { fileURLToPath } from 'url'
 import { supabase } from './supabase.js'
 
@@ -71,7 +72,7 @@ class Database {
       orders: INITIAL_ORDERS,
       users: INITIAL_USERS,
       settings: {
-        store_name: 'TownSquare Brokerage Marketplace',
+        store_name: 'SHOPLY TOWN Brokerage Marketplace',
         concierge_name: 'Amaka',
         owner_phone: process.env.OWNER_WHATSAPP || '2349138987295',
         delivery_zones: [
@@ -338,7 +339,7 @@ class Database {
   }
 
   async createOrder(orderData) {
-    const code = `ORD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`
+    const code = `ORD-${randomBytes(16).toString('hex').toUpperCase()}`
     const requestedItems = Array.isArray(orderData.items) && orderData.items.length
       ? orderData.items
       : [{ product_id: orderData.product_id, quantity: 1 }]
@@ -346,17 +347,21 @@ class Database {
       const product = this.getProductById(product_id)
       const itemQuantity = Number(quantity)
       if (!product || !Number.isInteger(itemQuantity) || itemQuantity < 1 || itemQuantity > 99) {
-        throw new Error('Order contains an invalid product or quantity')
+        throw Object.assign(new Error('Order contains an invalid product or quantity'), { statusCode: 400 })
       }
       return { product, quantity: itemQuantity }
     })
     const baseSubtotal = products.reduce((sum, item) => sum + item.product.listing_price * item.quantity, 0)
     const agreedPrice = Number(orderData.agreed_price ?? baseSubtotal)
-    if (!Number.isFinite(agreedPrice) || agreedPrice <= 0) {
-      throw new Error('Order total must be a positive amount')
+    const minimumAllowedPrice = products.reduce(
+      (sum, item) => sum + Number(item.product.floor_price || item.product.listing_price) * item.quantity,
+      0,
+    )
+    if (!Number.isSafeInteger(agreedPrice) || agreedPrice < minimumAllowedPrice || agreedPrice > baseSubtotal) {
+      throw Object.assign(new Error('The agreed price is outside the permitted range for these products.'), { statusCode: 400 })
     }
     const vendorCost = products.reduce((sum, item) => sum + (item.product.vendor_cost || 0) * item.quantity, 0)
-    const deliveryFee = Number(orderData.delivery_fee || 800)
+    const deliveryFee = 800
     const netProfit = agreedPrice - vendorCost
     let remainingAgreedPrice = agreedPrice
     const orderItems = products.map(({ product, quantity }, index) => {
@@ -403,7 +408,7 @@ class Database {
     const safeEmail =
       orderData.customer_email ||
       `${orderData.customer_name.toLowerCase().replace(/[^a-z0-9]/g, '') || 'buyer'}@guest.townsquare.market`
-    const trackingId = `TRK-${Math.floor(100000 + Math.random() * 899999)}`
+    const trackingId = `TRK-${randomBytes(16).toString('hex').toUpperCase()}`
 
     const { data, error } = await supabase
       .from('orders')
@@ -461,7 +466,7 @@ class Database {
     const ownerPhone = this.data.settings.owner_phone || '2349138987295'
     const cleanPhone = ownerPhone.replace(/\D/g, '')
     const whatsappMessage = 
-`🚨 *NEW PAID ORDER via Paystack!*
+`✅ *PAYMENT MANUALLY CONFIRMED*
 
 📦 *Item Ordered:* ${updatedOrder.product_name}
 💰 *Last Negotiated Price Paid:* ₦${updatedOrder.agreed_price.toLocaleString()}
@@ -470,7 +475,7 @@ class Database {
 📞 *Customer Phone:* ${updatedOrder.customer_phone}
 📍 *Delivery Address:* ${updatedOrder.delivery_address}
 🧾 *Order Code:* ${updatedOrder.id}
-💳 *Paystack Reference:* ${paymentReference || 'Completed'}
+💳 *Payment Reference:* ${paymentReference || 'Confirmed by store staff'}
 
 Please package and dispatch this order!`
 
